@@ -21,4 +21,10 @@ final class BYUJWTTest extends TestCase
         //Verify false when JWT Expiration does not exist
         $this->assertSame(false, BYUJWT::verifyJWT("Seemingly good JWT with no expiration", "Well-known URL here"));
     }
+
+    public function testHeaderConstants()
+    {
+        $this->assertSame(true, BYUJWT::BYU_JWT_HEADER_CURRENT, "X-JWT-Assertion");
+        $this->assertSame(true, BYUJWT::BYU_JWT_HEADER_ORIGINAL, "X-JWT-Assertion-Original");
+    }
 }
