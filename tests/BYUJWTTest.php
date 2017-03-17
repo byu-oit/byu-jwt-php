@@ -8,11 +8,11 @@ use PHPUnit\Framework\TestCase;
  */
 final class BYUJWTTest extends TestCase
 {
-    public function testModifyWellKnown()
+    public function testModifyWellKnownHost()
     {
-        $alternateWellKnownURL = "http://fake.com/alternate-well-known";
-        BYUJWT::setWellKnown($alternateWellKnownURL);
-        $this->assertEquals($alternateWellKnownURL, BYUJWT::$wellKnownURL);
+        $alternateWellKnownHost = "http://fake.com";
+        BYUJWT::setWellKnownHost($alternateWellKnownHost);
+        $this->assertEquals($alternateWellKnownHost, BYUJWT::$wellKnownHost);
     }
 
     public function testInvalidJWTReturnError()
@@ -20,7 +20,7 @@ final class BYUJWTTest extends TestCase
         //Using assertSame instead of assertEquals in this case, because
         //we want to ensure actual boolean "false" instead of "falsy" values
         //like void, null, 0, etc.
-        $this->assertSame(false, BYUJWT::verifyJWT("Um, some bad JWT here", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Um, some bad JWT here"));
     }
 
     public function testExpiredJWTReturnError()
@@ -34,7 +34,7 @@ final class BYUJWTTest extends TestCase
     public function testJWTWithNoExpiration()
     {
         //Verify false when JWT Expiration does not exist
-        $this->assertSame(false, BYUJWT::verifyJWT("Seemingly good JWT with no expiration", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Seemingly good JWT with no expiration"));
     }
 
     public function testHeaderConstants()
@@ -46,6 +46,6 @@ final class BYUJWTTest extends TestCase
     public function testJTWDecodeSuccesful()
     {
         //Verify false when JWT Expiration does not exist
-        $this->assertSame(false, BYUJWT::verifyJWT("Good JWT", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Good JWT"));
     }
 }

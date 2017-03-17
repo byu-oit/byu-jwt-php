@@ -26,7 +26,7 @@ use GuzzleHttp\Exception\RequestException;
  */
 class BYUJWT
 {
-    public static $wellKnownURL = 'https://api.byu.edu/.well-known/openid-configuration';
+    public static $wellKnownHost = 'https://api.byu.edu';
     public static $cacheWellKnowns = false;
     private static $_cache = [];
 
@@ -38,21 +38,21 @@ class BYUJWT
      */
     public static function getWellKnown()
     {
-        if(static::$cacheWellKnowns && array_key_exists(static::$wellKnownUrl, static::$_cache)) {
-            return static::$_cache[static::$wellKnownUrl];
+        if(static::$cacheWellKnowns && array_key_exists(static::$wellKnownHost, static::$_cache)) {
+            return static::$_cache[static::$wellKnownHost];
         }
-        static::$_cache[static::$wellKnownUrl] = null;
+        static::$_cache[static::$wellKnownHost] = null;
 
         try {
             $client = new Client();
-            $response = $client->get(static::$wellKnownUrl);
+            $response = $client->get(trim(static::$wellKnownHost, '/') . '/.well-known/openid-configuration');
         } catch (RequestException $e) {
             return null;
         }
 
-        static::$_cache[static::$wellKnownUrl] = @json_decode($response->getBody());
+        static::$_cache[static::$wellKnownHost] = @json_decode($response->getBody());
 
-        return static::$_cache[static::$wellKnownUrl];
+        return static::$_cache[static::$wellKnownHost];
     }
 
     public static function getPublicKey()
