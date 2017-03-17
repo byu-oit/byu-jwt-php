@@ -8,6 +8,13 @@ use PHPUnit\Framework\TestCase;
  */
 final class BYUJWTTest extends TestCase
 {
+    public function testModifyWellKnown()
+    {
+        $alternateWellKnownURL = "http://fake.com/alternate-well-known";
+        BYUJWT::setWellKnown($alternateWellKnownURL);
+        $this->assertEquals($alternateWellKnownURL, BYUJWT::$wellKnownURL);
+    }
+
     public function testInvalidJWTReturnError()
     {
         //Using assertSame instead of assertEquals in this case, because
@@ -23,7 +30,7 @@ final class BYUJWTTest extends TestCase
 
         $this->assertSame(false, BYUJWT::verifyJWT($expiredJWT, "https://api.byu.edu"));
     }
-}
+
     public function testJWTWithNoExpiration()
     {
         //Verify false when JWT Expiration does not exist
@@ -41,5 +48,4 @@ final class BYUJWTTest extends TestCase
         //Verify false when JWT Expiration does not exist
         $this->assertSame(false, BYUJWT::verifyJWT("Good JWT", "Well-known URL here"));
     }
-    
 }
