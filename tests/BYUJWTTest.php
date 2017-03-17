@@ -9,6 +9,43 @@ use PHPUnit\Framework\TestCase;
 final class BYUJWTTest extends TestCase
 {
 
+    // Global valid jwt for use in tests against a valid JWT
+    var $validJWT = "";
+
+    /*
+     * The test suite requires the .wso2-test-credentials.json file to be present
+     * the suite will assume the file can be found at ~/.wso2-test-credentials.json
+     * 
+     * The location of the credentials can be modified using the WSO2_CRED_LOC env variable
+     */
+    public static function setUpBeforeClass() {
+        // Get information about the owner (to get the home dir)
+        $userInfo = posix_getpwuid(posix_getuid());
+
+        // Set file location to WSO2_CRED_LOC if exists or to ~/.wso2-test-credentials.json
+        $fileLocation = getenv("WSO2_CRED_LOC") ?: $userInfo["dir"]."/.wso2-test-credentials.json";
+
+        $credentials = file_get_contents($fileLocation);
+        $credentials = json_decode($credentials, true);
+
+        // Get a valid Client Credentials OAuth token
+        $token_req = curl_init("https://api.byu.edu/token");
+        curl_setopt($token_req, CURLOPT_USERPWD, $credentials["client_id"] . ":" . $credentials["client_secret"]);
+        $token_res = curl_exec($token_req);
+        $token_res = json_decode($token_res, true);
+
+        // Get a valid JWT from the Echo service
+        $req = curl_init("https://api.byu.edu/echo/v1/echo/hello");
+        curl_setopt($req, CURLOPT_HTTPHEADER, array(
+            'Authorization: Bearer '.$token_res["access_token"]
+        ));
+        $echo_res = curl_exec($req);
+        $echo_res = json_decode($echo_res, true);
+        $validJWT = $echo_res["X-JWT-Assertion"];
+
+        echo($validJWT);
+    }
+
     public function setUp() {
         BYUJWT::reset();
         parent::setUp();
@@ -44,7 +81,11 @@ final class BYUJWTTest extends TestCase
 
         $this->assertSame(false, BYUJWT::verifyJWT($expiredJWT, "https://api.byu.edu"));
     }
+<<<<<<< Updated upstream
 
+=======
+  
+>>>>>>> Stashed changes
     public function testJWTWithNoExpiration()
     {
         //Verify false when JWT Expiration does not exist
