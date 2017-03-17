@@ -15,7 +15,7 @@
 
 namespace BYU\JWT;
 
-//use Firebase\JWT\JWT as FireJWT; //used in "verify" function
+use Firebase\JWT\JWT;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 
@@ -28,6 +28,14 @@ class BYUJWT
 {
     public static $cacheWellKnowns = false;
     private static $_cache = [];
+  
+    $key = "example_key";
+    $token = array(
+        "iss" => "http://example.org",
+        "aud" => "http://example.com",
+        "iat" => 1356999524,
+        "nbf" => 1357000000
+    );
 
     /**
      * Get the response of the specified .well-known URL.
@@ -68,6 +76,15 @@ class BYUJWT
 
     public static function jwtDecoded($jwt, $wellKnownUrl)
     {
-        //TODO
+      $jwt = JWT::encode($token, $key);
+      $decoded = JWT::decode($jwt, $key, array('HS256'));
+       
+      /*
+       NOTE: This will now be an object instead of an associative array. To get
+       an associative array, you will need to cast it as such:
+       */
+
+       $decoded_array = (array) $decoded;
+       return $decoded_array;
     }
 }
