@@ -29,6 +29,7 @@ class BYUJWT
     public static $wellKnownHost = 'https://api.byu.edu';
     public static $cacheWellKnowns = false;
     private static $_cache = [];
+
     const BYU_JWT_HEADER_CURRENT = "X-JWT-Assertion";
     const BYU_JWT_HEADER_ORIGINAL = "X-JWT-Assertion-Original";
 
@@ -55,6 +56,11 @@ class BYUJWT
         static::$_cache[static::$wellKnownHost] = @json_decode($response->getBody());
 
         return static::$_cache[static::$wellKnownHost];
+    }
+
+    public static function setWellKnownHost($host)
+    {
+        static::$wellKnownHost = $host;
     }
 
     public static function getPublicKey()
