@@ -39,8 +39,8 @@ final class BYUJWTTest extends TestCase
 
     public function testHeaderConstants()
     {
-        $this->assertSame(true, BYUJWT::BYU_JWT_HEADER_CURRENT, "X-JWT-Assertion");
-        $this->assertSame(true, BYUJWT::BYU_JWT_HEADER_ORIGINAL, "X-JWT-Assertion-Original");
+        $this->assertEquals(BYUJWT::BYU_JWT_HEADER_CURRENT, "X-JWT-Assertion");
+        $this->assertEquals(BYUJWT::BYU_JWT_HEADER_ORIGINAL, "X-JWT-Assertion-Original");
     }
 
     public function testJTWDecodeSuccesful()
