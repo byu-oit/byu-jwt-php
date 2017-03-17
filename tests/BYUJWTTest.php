@@ -1,6 +1,8 @@
 <?php
 
 use BYU\JWT\BYUJWT;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -10,40 +12,39 @@ final class BYUJWTTest extends TestCase
 {
 
     // Global valid jwt for use in tests against a valid JWT
-    var $validJWT = "";
+    protected $validJWT = "";
 
     /*
-     * The test suite requires the .wso2-test-credentials.json file to be present
-     * the suite will assume the file can be found at ~/.wso2-test-credentials.json
-     * 
+     * The test suite requires the wso2-test-credentials.json file to be present
+     *
      * The location of the credentials can be modified using the WSO2_CRED_LOC env variable
      */
     public static function setUpBeforeClass() {
-        // Get information about the owner (to get the home dir)
-        $userInfo = posix_getpwuid(posix_getuid());
+        // Set file location to WSO2_CRED_LOC if exists or to wso2-test-credentials.json
+        $fileLocation = getenv("WSO2_CRED_LOC") ?: dirname(dirname(__FILE__)) . '/wso2-test-credentials.json';
 
-        // Set file location to WSO2_CRED_LOC if exists or to ~/.wso2-test-credentials.json
-        $fileLocation = getenv("WSO2_CRED_LOC") ?: $userInfo["dir"]."/.wso2-test-credentials.json";
+        $credentialsJSON = file_get_contents($fileLocation);
+        $credentials = json_decode($credentialsJSON);
 
-        $credentials = file_get_contents($fileLocation);
-        $credentials = json_decode($credentials, true);
+        $client = new Client();
+        try {
+            $response = $client->post('https://api.byu.edu/token', [
+                'body' => 'grant_type=client_credentials',
+                'auth' => [$credentials->client_id, $credentials->client_secret]]);
+        } catch (RequestException $e) {
+            return null;
+        }
+        $token = json_decode($response->getBody());
 
-        // Get a valid Client Credentials OAuth token
-        $token_req = curl_init("https://api.byu.edu/token");
-        curl_setopt($token_req, CURLOPT_USERPWD, $credentials["client_id"] . ":" . $credentials["client_secret"]);
-        $token_res = curl_exec($token_req);
-        $token_res = json_decode($token_res, true);
-
-        // Get a valid JWT from the Echo service
-        $req = curl_init("https://api.byu.edu/echo/v1/echo/hello");
-        curl_setopt($req, CURLOPT_HTTPHEADER, array(
-            'Authorization: Bearer '.$token_res["access_token"]
-        ));
-        $echo_res = curl_exec($req);
-        $echo_res = json_decode($echo_res, true);
-        $validJWT = $echo_res["X-JWT-Assertion"];
-
-        echo($validJWT);
+        try {
+            $echoResponse = $client->get('https://api.byu.edu/echo/v1/echo/hello', [
+                'headers' => [
+                    'Authorization' => "Bearer {$token->access_token}"]]);
+        } catch (RequestException $e) {
+            return null;
+        }
+        $echoBody = json_decode($echoResponse->getBody(), true);
+        $this->validJWT = $echoBody["X-Jwt-Assertion"][0];
     }
 
     public function setUp() {
@@ -81,11 +82,7 @@ final class BYUJWTTest extends TestCase
 
         $this->assertSame(false, BYUJWT::verifyJWT($expiredJWT, "https://api.byu.edu"));
     }
-<<<<<<< Updated upstream
 
-=======
-  
->>>>>>> Stashed changes
     public function testJWTWithNoExpiration()
     {
         //Verify false when JWT Expiration does not exist
@@ -103,46 +100,47 @@ final class BYUJWTTest extends TestCase
         //Verify false when JWT Expiration does not exist
         $this->assertSame(false, BYUJWT::verifyJWT("Good JWT", "Well-known URL here"));
         $this->assertSame(false, BYUJWT::verifyJWT("Good JWT"));
+    }
 
     public function testJTWDecodeSuccesful()
     {
-				$decodedJwt = BYUJWT::jwtDecoded("Good JWT", "Well-known UTL here");
-				$this->assertEquals("649019965", $decodedJwt->byu->client->byuId);
-				$this->assertEquals("CLIENT_SUBSCRIBER", $decodedJwt->byu->client->claim_source);
-				$this->assertEquals("adddrop", $decodedJwt->byu->client->netId);
-				$this->assertEquals("377228062", $decodedJwt->byu->client->personId);
-				$this->assertEquals("Add", $decodedJwt->byu->client->preferredFirstName);
-				$this->assertEquals(" ", $decodedJwt->byu->client->prefix);
-				$this->assertEquals("Add", $decodedJwt->byu->client->restOfName);
-				$this->assertEquals("Drop, Add", $decodedJwt->byu->client->sortName);
-				$this->assertEquals("adddrop", $decodedJwt->byu->client->subscriberNetId);
-				$this->assertEquals(" ", $decodedJwt->byu->client->suffix);
-				$this->assertEquals("Drop", $decodedJwt->byu->client->surname);
-				$this->assertEquals("L", $decodedJwt->byu->client->surnamePosition);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->byuId);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->netId);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->personId);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->preferredFirstName);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->prefix);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->restOfName);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->sortName);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->suffix);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->surname);
-				#$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->surnamePosition);
-				$this->assertEquals("649019965", $decodedJwt->byu->webResCheck->byuId);
-				$this->assertEquals("adddrop", $decodedJwt->byu->webResCheck->netId);
-				$this->assertEquals("377228062", $decodedJwt->byu->webResCheck->personId);
-				$this->assertEquals("/echo/v1", $decodedJwt->wso2->apiContext);
-				$this->assertEquals("2085", $decodedJwt->wso2->application->id);
-				$this->assertEquals("DefaultApplication", $decodedJwt->wso2->application->name);
-				$this->assertEquals("Unlimited", $decodedJwt->wso2->application->tier);
-				$this->assertEquals("5gzLjMUcx7qut3MuSf9xr8GV2BAa", $decodedJwt->wso2->clientId);
-				$this->assertEquals("adddrop@carbon.super", $decodedJwt->wso2->endUser);
-				$this->assertEquals("-1234", $decodedJwt->wso2->endUserTenantId);
-				$this->assertEquals("PRODUCTION", $decodedJwt->wso2->keyType);
-				$this->assertEquals("BYU/adddrop", $decodedJwt->wso2->subscriber);
-				$this->assertEquals("Bronze", $decodedJwt->wso2->tier);
-				$this->assertEquals("APPLICATION", $decodedJwt->wso2->userType);
-				$this->assertEquals("v1", $decodedJwt->wso2->version);
+                $decodedJwt = BYUJWT::jwtDecoded("Good JWT", "Well-known UTL here");
+                $this->assertEquals("649019965", $decodedJwt->byu->client->byuId);
+                $this->assertEquals("CLIENT_SUBSCRIBER", $decodedJwt->byu->client->claim_source);
+                $this->assertEquals("adddrop", $decodedJwt->byu->client->netId);
+                $this->assertEquals("377228062", $decodedJwt->byu->client->personId);
+                $this->assertEquals("Add", $decodedJwt->byu->client->preferredFirstName);
+                $this->assertEquals(" ", $decodedJwt->byu->client->prefix);
+                $this->assertEquals("Add", $decodedJwt->byu->client->restOfName);
+                $this->assertEquals("Drop, Add", $decodedJwt->byu->client->sortName);
+                $this->assertEquals("adddrop", $decodedJwt->byu->client->subscriberNetId);
+                $this->assertEquals(" ", $decodedJwt->byu->client->suffix);
+                $this->assertEquals("Drop", $decodedJwt->byu->client->surname);
+                $this->assertEquals("L", $decodedJwt->byu->client->surnamePosition);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->byuId);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->netId);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->personId);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->preferredFirstName);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->prefix);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->restOfName);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->sortName);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->suffix);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->surname);
+                #$this->assertEquals("adddrop", $decodedJwt->byu->resourceOwner->surnamePosition);
+                $this->assertEquals("649019965", $decodedJwt->byu->webResCheck->byuId);
+                $this->assertEquals("adddrop", $decodedJwt->byu->webResCheck->netId);
+                $this->assertEquals("377228062", $decodedJwt->byu->webResCheck->personId);
+                $this->assertEquals("/echo/v1", $decodedJwt->wso2->apiContext);
+                $this->assertEquals("2085", $decodedJwt->wso2->application->id);
+                $this->assertEquals("DefaultApplication", $decodedJwt->wso2->application->name);
+                $this->assertEquals("Unlimited", $decodedJwt->wso2->application->tier);
+                $this->assertEquals("5gzLjMUcx7qut3MuSf9xr8GV2BAa", $decodedJwt->wso2->clientId);
+                $this->assertEquals("adddrop@carbon.super", $decodedJwt->wso2->endUser);
+                $this->assertEquals("-1234", $decodedJwt->wso2->endUserTenantId);
+                $this->assertEquals("PRODUCTION", $decodedJwt->wso2->keyType);
+                $this->assertEquals("BYU/adddrop", $decodedJwt->wso2->subscriber);
+                $this->assertEquals("Bronze", $decodedJwt->wso2->tier);
+                $this->assertEquals("APPLICATION", $decodedJwt->wso2->userType);
+                $this->assertEquals("v1", $decodedJwt->wso2->version);
     }
 }
