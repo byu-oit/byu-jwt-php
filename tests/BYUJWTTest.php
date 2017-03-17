@@ -8,12 +8,19 @@ use PHPUnit\Framework\TestCase;
  */
 final class BYUJWTTest extends TestCase
 {
+    public function testModifyWellKnownHost()
+    {
+        $alternateWellKnownHost = "http://fake.com";
+        BYUJWT::setWellKnownHost($alternateWellKnownHost);
+        $this->assertEquals($alternateWellKnownHost, BYUJWT::$wellKnownHost);
+    }
+
     public function testInvalidJWTReturnError()
     {
         //Using assertSame instead of assertEquals in this case, because
         //we want to ensure actual boolean "false" instead of "falsy" values
         //like void, null, 0, etc.
-        $this->assertSame(false, BYUJWT::verifyJWT("Um, some bad JWT here", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Um, some bad JWT here"));
     }
 
     public function testExpiredJWTReturnError()
@@ -23,17 +30,27 @@ final class BYUJWTTest extends TestCase
 
         $this->assertSame(false, BYUJWT::verifyJWT($expiredJWT, "https://api.byu.edu"));
     }
-    
+
     public function testJWTWithNoExpiration()
     {
         //Verify false when JWT Expiration does not exist
-        $this->assertSame(false, BYUJWT::verifyJWT("Seemingly good JWT with no expiration", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Seemingly good JWT with no expiration"));
     }
-    
-    public function testJTWDecodeSuccesful()
+
+    public function testHeaderConstants()
+    {
+        $this->assertEquals(BYUJWT::BYU_JWT_HEADER_CURRENT, "X-JWT-Assertion");
+        $this->assertEquals(BYUJWT::BYU_JWT_HEADER_ORIGINAL, "X-JWT-Assertion-Original");
+    }
+
+    public function testJTWVerifySuccesful()
     {
         //Verify false when JWT Expiration does not exist
         $this->assertSame(false, BYUJWT::verifyJWT("Good JWT", "Well-known URL here"));
+        $this->assertSame(false, BYUJWT::verifyJWT("Good JWT"));
+
+    public function testJTWDecodeSuccesful()
+    {
 				$decodedJwt = BYUJWT::jwtDecoded("Good JWT", "Well-known UTL here");
 				$this->assertSame("649019965", $decodedJwt.byu.client.byuId);
 				$this->assertSame("CLIENT_SUBSCRIBER", $decodedJwt.byu.client.claim_source);
@@ -73,7 +90,4 @@ final class BYUJWTTest extends TestCase
 				$this->assertSame("APPLICATION", $decodedJwt.wso2.userType);
 				$this->assertSame("v1", $decodedJwt.wso2.version);
     }
-    
 }
-
-    

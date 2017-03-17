@@ -26,55 +26,54 @@ use GuzzleHttp\Exception\RequestException;
  */
 class BYUJWT
 {
+    public static $wellKnownHost = 'https://api.byu.edu';
     public static $cacheWellKnowns = false;
     private static $_cache = [];
-  
-    $key = "example_key";
-    $token = array(
-        "iss" => "http://example.org",
-        "aud" => "http://example.com",
-        "iat" => 1356999524,
-        "nbf" => 1357000000
-    );
+
+    const BYU_JWT_HEADER_CURRENT = "X-JWT-Assertion";
+    const BYU_JWT_HEADER_ORIGINAL = "X-JWT-Assertion-Original";
 
     /**
      * Get the response of the specified .well-known URL.
      * If cacheWellKnowns is set to true then it returns the previously retrieved response.
      *
-     * @param string $wellKnownUrl
-     *
      * @return object Parsed JSON response from the well known URL
      */
-    public static function getWellKnown($wellKnownUrl)
+    public static function getWellKnown()
     {
-        if(static::$cacheWellKnowns && array_key_exists($wellKnownUrl, static::$_cache)) {
-            return static::$_cache[$wellKnownUrl];
+        if(static::$cacheWellKnowns && array_key_exists(static::$wellKnownHost, static::$_cache)) {
+            return static::$_cache[static::$wellKnownHost];
         }
-        static::$_cache[$wellKnownUrl] = null;
+        static::$_cache[static::$wellKnownHost] = null;
 
         try {
             $client = new Client();
-            $response = $client->get($wellKnownUrl);
+            $response = $client->get(trim(static::$wellKnownHost, '/') . '/.well-known/openid-configuration');
         } catch (RequestException $e) {
             return null;
         }
 
-        static::$_cache[$wellKnownUrl] = @json_decode($response->getBody());
+        static::$_cache[static::$wellKnownHost] = @json_decode($response->getBody());
 
-        return static::$_cache[$wellKnownUrl];
+        return static::$_cache[static::$wellKnownHost];
     }
 
-    public static function getPublicKey($wellKnownUrl)
+    public static function setWellKnownHost($host)
+    {
+        static::$wellKnownHost = $host;
+    }
+
+    public static function getPublicKey()
     {
         //TODO
     }
 
-    public static function verifyJWT($jwt, $wellKnownUrl)
+    public static function verifyJWT($jwt)
     {
         //TODO
     }
 
-    public static function jwtDecoded($jwt, $wellKnownUrl)
+    public static function jwtDecoded($jwt)
     {
       $jwt = JWT::encode($token, $key);
       $decoded = JWT::decode($jwt, $key, array('HS256'));
