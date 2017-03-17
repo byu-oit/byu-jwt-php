@@ -34,6 +34,16 @@ class BYUJWT
     const BYU_JWT_HEADER_ORIGINAL = "X-JWT-Assertion-Original";
 
     /**
+     * Clear cache, reset variables
+     */
+    public static function reset()
+    {
+        static::$wellKnownHost = 'https://api.byu.edu';
+        static::$cacheWellKnowns = false;
+        static::$_cache = [];
+    }
+
+    /**
      * Get the response of the specified .well-known URL.
      * If cacheWellKnowns is set to true then it returns the previously retrieved response.
      *
