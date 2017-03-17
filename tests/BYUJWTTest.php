@@ -8,11 +8,25 @@ use PHPUnit\Framework\TestCase;
  */
 final class BYUJWTTest extends TestCase
 {
+
+    public function setUp() {
+        BYUJWT::reset();
+        parent::setUp();
+    }
+
     public function testModifyWellKnownHost()
     {
+        $existingHost = BYUJWT::$wellKnownHost;
         $alternateWellKnownHost = "http://fake.com";
         BYUJWT::setWellKnownHost($alternateWellKnownHost);
         $this->assertEquals($alternateWellKnownHost, BYUJWT::$wellKnownHost);
+    }
+
+    public function testGetWellKnown()
+    {
+        $wellKnown = BYUJWT::getWellKnown();
+        $this->assertNotEmpty($wellKnown);
+        $this->assertEquals($wellKnown->issuer, 'https://api.byu.edu');
     }
 
     public function testInvalidJWTReturnError()
