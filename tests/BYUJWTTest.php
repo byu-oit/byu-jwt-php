@@ -34,6 +34,44 @@ final class BYUJWTTest extends TestCase
     {
         //Verify false when JWT Expiration does not exist
         $this->assertSame(false, BYUJWT::verifyJWT("Good JWT", "Well-known URL here"));
+				$decodedJwt = BYUJWT::jwtDecoded("Good JWT", "Well-known UTL here");
+				$this->assertSame("649019965", $decodedJwt.byu.client.byuId);
+				$this->assertSame("CLIENT_SUBSCRIBER", $decodedJwt.byu.client.claim_source);
+				$this->assertSame("adddrop", $decodedJwt.byu.client.netId);
+				$this->assertSame("377228062", $decodedJwt.byu.client.personId);
+				$this->assertSame("Add", $decodedJwt.byu.client.preferredFirstName);
+				$this->assertSame(" ", $decodedJwt.byu.client.prefix);
+				$this->assertSame("Add", $decodedJwt.byu.client.restOfName);
+				$this->assertSame("Drop, Add", $decodedJwt.byu.client.sortName);
+				$this->assertSame("adddrop", $decodedJwt.byu.client.subscriberNetId);
+				$this->assertSame(" ", $decodedJwt.byu.client.suffix);
+				$this->assertSame("Drop", $decodedJwt.byu.client.surname);
+				$this->assertSame("L", $decodedJwt.byu.client.surnamePosition);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.byuId);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.netId);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.personId);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.preferredFirstName);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.prefix);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.restOfName);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.sortName);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.suffix);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.surname);
+				#$this->assertSame("adddrop", $decodedJwt.byu.resourceOwner.surnamePosition);
+				$this->assertSame("649019965", $decodedJwt.byu.webResCheck.byuId);
+				$this->assertSame("adddrop", $decodedJwt.byu.webResCheck.netId);
+				$this->assertSame("377228062", $decodedJwt.byu.webResCheck.personId);
+				$this->assertSame("/echo/v1", $decodedJwt.wso2.apiContext);
+				$this->assertSame("2085", $decodedJwt.wso2.application.id);
+				$this->assertSame("DefaultApplication", $decodedJwt.wso2.application.name);
+				$this->assertSame("Unlimited", $decodedJwt.wso2.application.tier);
+				$this->assertSame("5gzLjMUcx7qut3MuSf9xr8GV2BAa", $decodedJwt.wso2.clientId);
+				$this->assertSame("adddrop@carbon.super", $decodedJwt.wso2.endUser);
+				$this->assertSame("-1234", $decodedJwt.wso2.endUserTenantId);
+				$this->assertSame("PRODUCTION", $decodedJwt.wso2.keyType);
+				$this->assertSame("BYU/adddrop", $decodedJwt.wso2.subscriber);
+				$this->assertSame("Bronze", $decodedJwt.wso2.tier);
+				$this->assertSame("APPLICATION", $decodedJwt.wso2.userType);
+				$this->assertSame("v1", $decodedJwt.wso2.version);
     }
     
 }
