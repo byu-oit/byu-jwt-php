@@ -32,8 +32,8 @@ class BYUJWT
     public static $wellKnownHost = 'https://api.byu.edu';
     public static $useCache = true;
     public static $lastException;
-    protected static $_cache = [];
-    protected static $_client;
+    protected static $cache = [];
+    protected static $client;
 
     const BYU_JWT_HEADER_CURRENT = "X-JWT-Assertion";
     const BYU_JWT_HEADER_ORIGINAL = "X-JWT-Assertion-Original";
@@ -48,7 +48,7 @@ class BYUJWT
         static::$wellKnownHost = 'https://api.byu.edu';
         static::$useCache = true;
         static::$lastException = null;
-        static::$_cache = [];
+        static::$cache = [];
     }
 
     /**
@@ -59,11 +59,11 @@ class BYUJWT
      */
     public static function getWellKnown()
     {
-        if(static::$useCache) {
-            if (array_key_exists(static::$wellKnownHost, static::$_cache) && array_key_exists('well-known', static::$_cache[static::$wellKnownHost])) {
-                return static::$_cache[static::$wellKnownHost]['well-known'];
+        if (static::$useCache) {
+            if (array_key_exists(static::$wellKnownHost, static::$cache) && array_key_exists('well-known', static::$cache[static::$wellKnownHost])) {
+                return static::$cache[static::$wellKnownHost]['well-known'];
             }
-            static::$_cache[static::$wellKnownHost]['well-known'] = null;
+            static::$cache[static::$wellKnownHost]['well-known'] = null;
         }
 
         try {
@@ -79,7 +79,7 @@ class BYUJWT
         }
 
         if (static::$useCache) {
-            static::$_cache[static::$wellKnownHost]['well-known'] = $output;
+            static::$cache[static::$wellKnownHost]['well-known'] = $output;
         }
 
         return $output;
@@ -87,6 +87,8 @@ class BYUJWT
 
     /**
      * Override the base "well known URL"
+     *
+     * @param string $host New well known URL
      *
      * @return void
      */
@@ -102,11 +104,11 @@ class BYUJWT
      */
     public static function getPublicKey()
     {
-        if(static::$useCache) {
-            if (array_key_exists(static::$wellKnownHost, static::$_cache) && array_key_exists('public-key', static::$_cache[static::$wellKnownHost])) {
-                return static::$_cache[static::$wellKnownHost]['public-key'];
+        if (static::$useCache) {
+            if (array_key_exists(static::$wellKnownHost, static::$cache) && array_key_exists('public-key', static::$cache[static::$wellKnownHost])) {
+                return static::$cache[static::$wellKnownHost]['public-key'];
             }
-            static::$_cache[static::$wellKnownHost]['public-key'] = null;
+            static::$cache[static::$wellKnownHost]['public-key'] = null;
         }
 
         $wellKnown = static::getWellKnown();
@@ -133,7 +135,7 @@ class BYUJWT
 
         $key = (string)$X509->getPublicKey();
         if (static::$useCache) {
-            static::$_cache[static::$wellKnownHost]['public-key'] = $key;
+            static::$cache[static::$wellKnownHost]['public-key'] = $key;
         }
         return $key;
     }
@@ -141,9 +143,9 @@ class BYUJWT
     /**
      * Check if a JWT is valid
      *
-     * @param string JWT
+     * @param string $jwt JWT
      *
-     * @return boolean true if $jwt is a valid JWT, false if not
+     * @return bool true if $jwt is a valid JWT, false if not
      */
     public static function validateJWT($jwt)
     {
@@ -161,7 +163,7 @@ class BYUJWT
     /**
      * Decode a JWT
      *
-     * @param string JWT
+     * @param string $jwt JWT
      *
      * @return object decoded JWT
      *
@@ -170,7 +172,7 @@ class BYUJWT
     public static function decode($jwt)
     {
         $key = static::getPublicKey();
-        $decodedObject = JWT::decode($jwt, $key, ['HS256','RS256','HS512','HS384']);
+        $decodedObject = JWT::decode($jwt, $key, ['HS256', 'RS256', 'HS512', 'HS384']);
 
         //JWT::decode returns at stdClass object, but iterating through keys is much
         //simpler with an array. So here's a quick Object-to-Array conversion
@@ -182,14 +184,21 @@ class BYUJWT
             //For BYU we want to ensure that it does exist, as well as being valid
             throw new NoExpirationException('No expiration in JWT');
         }
+
         return $decoded;
     }
 
+    /**
+     * Simple factory for GuzzleHttp\Client so we only have one instance
+     *
+     * @return \GuzzleHttp\Client
+     */
     protected static function client()
     {
-        if (empty(static::$_client)) {
-            static::$_client = new Client();
+        if (empty(static::$client)) {
+            static::$client = new Client();
         }
-        return static::$_client;
+
+        return static::$client;
     }
 }

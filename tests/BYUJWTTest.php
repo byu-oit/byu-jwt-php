@@ -38,7 +38,8 @@ final class BYUJWTTest extends TestCase
      *
      * The location of the credentials can be modified using the WSO2_CRED_LOC env variable
      */
-    public static function setUpBeforeClass() {
+    public static function setUpBeforeClass()
+    {
         // Set file location to WSO2_CRED_LOC if exists or to wso2-test-credentials.json
         $fileLocation = getenv("WSO2_CRED_LOC") ?: dirname(dirname(__FILE__)) . '/wso2-test-credentials.json';
 
@@ -66,7 +67,8 @@ final class BYUJWTTest extends TestCase
         static::$validJWT = $echoBody['Headers']["X-Jwt-Assertion"][0];
     }
 
-    public function setUp() {
+    public function setUp()
+    {
         BYUJWT::reset();
         parent::setUp();
     }
