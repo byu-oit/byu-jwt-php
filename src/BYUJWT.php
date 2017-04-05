@@ -170,8 +170,13 @@ class BYUJWT
     public static function decode($jwt)
     {
         $key = static::getPublicKey();
-        $decoded = JWT::decode($jwt, $key, ['HS256','RS256','HS512','HS384']);
-        if (empty($decoded->exp)) {
+        $decodedObject = JWT::decode($jwt, $key, ['HS256','RS256','HS512','HS384']);
+
+        //JWT::decode returns at stdClass object, but iterating through keys is much
+        //simpler with an array. So here's a quick Object-to-Array conversion
+        $decoded = json_decode(json_encode($decodedObject), true);
+
+        if (empty($decoded['exp'])) {
             //Firebase\JWT\JWT::decode does not throw an error if "exp" does not exist,
             //although it does throw an error if it exists but has already passed
             //For BYU we want to ensure that it does exist, as well as being valid

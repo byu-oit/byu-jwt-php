@@ -115,7 +115,7 @@ final class BYUJWTTest extends TestCase
     {
         //Validation should be false when Expiration does not exist in an otherwise valid JWT
         $decoded = BYUJWT::decode(static::$validJWT);
-        unset($decoded->exp);
+        unset($decoded['exp']);
         $badJwt = JWT::encode($decoded, BYUJWT::getPublicKey());
 
         $this->assertSame(false, BYUJWT::validateJWT($badJwt));
@@ -137,7 +137,7 @@ final class BYUJWTTest extends TestCase
     {
         $decodedJwt = BYUJWT::decode(static::$validJWT);
         $this->assertNotEmpty($decodedJwt);
-        $this->assertEquals('https://api.byu.edu', $decodedJwt->iss);
-        $this->assertEquals(static::$credentials->client_id, $decodedJwt->{'http://wso2.org/claims/client_id'});
+        $this->assertEquals('https://api.byu.edu', $decodedJwt['iss']);
+        $this->assertEquals(static::$credentials->client_id, $decodedJwt['http://wso2.org/claims/client_id']);
     }
 }
