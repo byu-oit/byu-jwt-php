@@ -23,7 +23,7 @@ use GuzzleHttp\Exception\RequestException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers BYUJWT
+ * @covers \BYU\JWT\BYUJWT
  */
 final class BYUJWTTest extends TestCase
 {
@@ -73,11 +73,11 @@ final class BYUJWTTest extends TestCase
 
     public function testModifyWellKnownHost()
     {
-        $existingHost = BYUJWT::$wellKnownHost;
-        $alternateWellKnownHost = "http://fake.com";
+        $alternateWellKnownHost = "http://fake-url-which-does-not-exist-at-all.com";
         BYUJWT::setWellKnownHost($alternateWellKnownHost);
         $this->assertEquals($alternateWellKnownHost, BYUJWT::$wellKnownHost);
-        BYUJWT::setWellKnownHost($existingHost);
+        $this->assertEmpty(BYUJWT::getWellKnown());
+        $this->assertEmpty(BYUJWT::getPublicKey());
     }
 
     public function testGetPublicKey()

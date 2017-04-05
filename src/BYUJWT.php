@@ -69,10 +69,15 @@ class BYUJWT
         try {
             $response = static::client()->get(trim(static::$wellKnownHost, '/') . '/.well-known/openid-configuration');
         } catch (RequestException $e) {
+            static::$lastException = $e;
             return null;
         }
 
-        $output = @json_decode($response->getBody());
+        $output = json_decode($response->getBody());
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+
         if (static::$useCache) {
             static::$_cache[static::$wellKnownHost]['well-known'] = $output;
         }
@@ -112,6 +117,7 @@ class BYUJWT
         try {
             $response = static::client()->get($wellKnown->jwks_uri);
         } catch (RequestException $e) {
+            static::$lastException = $e;
             return null;
         }
 
