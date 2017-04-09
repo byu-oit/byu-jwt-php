@@ -19,7 +19,7 @@ And run `php composer.phar update`
 The most common use case is simply decoding a JWT:
 ```php
 try {
-    $decoded = BYUJWT::decode($jwt);
+    $decoded = (new BYUJWT)->decode($jwt);
 } catch (Exception $e) {
     //JWT was not valid, do something
 }

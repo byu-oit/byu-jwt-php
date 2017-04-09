@@ -32,6 +32,8 @@ final class BYUJWTTest extends TestCase
     protected static $validJWT = "";
     // credentials used to generate valid JWT above
     protected static $credentials;
+    // Dummy OpenSSL keypair created for testing
+    protected static $dummyKey;
 
     /*
      * The test suite requires the wso2-test-credentials.json file to be present
@@ -40,6 +42,9 @@ final class BYUJWTTest extends TestCase
      */
     public static function setUpBeforeClass()
     {
+        $dummyPem = file_get_contents(dirname(__FILE__) . '/testing.pem');
+        static::$dummyKey = openssl_pkey_get_private($dummyPem, 'jwt_test');
+
         // Set file location to WSO2_CRED_LOC if exists or to wso2-test-credentials.json
         $fileLocation = getenv("WSO2_CRED_LOC") ?: dirname(dirname(__FILE__)) . '/wso2-test-credentials.json';
 
@@ -69,28 +74,27 @@ final class BYUJWTTest extends TestCase
 
     public function setUp()
     {
-        BYUJWT::reset();
+//TODO: set up mock Guzzle Client so we don't have to rely on actual server connections to test internal functionality
+        $this->jwt = new BYUJWT();
         parent::setUp();
     }
 
-    public function testModifyWellKnownHost()
+    public function testBadWellKnownHost()
     {
-        $alternateWellKnownHost = "http://fake-url-which-does-not-exist-at-all.com";
-        BYUJWT::setWellKnownHost($alternateWellKnownHost);
-        $this->assertEquals($alternateWellKnownHost, BYUJWT::$wellKnownHost);
-        $this->assertEmpty(BYUJWT::getWellKnown());
-        $this->assertEmpty(BYUJWT::getPublicKey());
+        $badJwt = new BYUJWT(['host' => 'http://fake-url-which-does-not-exist-at-all.com']);
+        $this->assertEmpty($badJwt->getWellKnown());
+        $this->assertEmpty($badJwt->getPublicKey());
     }
 
     public function testGetPublicKey()
     {
-        $key = BYUJWT::getPublicKey();
+        $key = $this->jwt->getPublicKey();
         $this->assertNotEmpty($key);
     }
 
     public function testGetWellKnown()
     {
-        $wellKnown = BYUJWT::getWellKnown();
+        $wellKnown = $this->jwt->getWellKnown();
         $this->assertNotEmpty($wellKnown);
         $this->assertEquals($wellKnown->issuer, 'https://api.byu.edu');
     }
@@ -100,8 +104,8 @@ final class BYUJWTTest extends TestCase
         //Using assertSame instead of assertEquals in this case, because
         //we want to ensure actual boolean "false" instead of "falsy" values
         //like void, null, 0, etc.
-        $this->assertSame(false, BYUJWT::validateJWT("Blah blah this is not at all a valid JWT"));
-        $this->assertInstanceOf('Exception', BYUJWT::$lastException);
+        $this->assertSame(false, $this->jwt->validateJWT("Blah blah this is not at all a valid JWT"));
+        $this->assertInstanceOf('Exception', $this->jwt->lastException);
     }
 
     public function testExpiredJWTReturnError()
@@ -109,19 +113,24 @@ final class BYUJWTTest extends TestCase
         // Expired JWT for a bot user
         $expiredJWT = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IlpUUm1NMk5tWkRabFlUZG1aRFJqWVdJME1tTXpZamd4WWpNd1lXUXhNems0TnpFd09EVmxNdyJ9.eyJpc3MiOiJodHRwczovL2FwaS5ieXUuZWR1IiwiZXhwIjoxNDg5NzY4MTczLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3N1YnNjcmliZXIiOiJCWVUvYWRkZHJvcCIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25pZCI6IjIwODUiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2FwcGxpY2F0aW9ubmFtZSI6IkRlZmF1bHRBcHBsaWNhdGlvbiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb250aWVyIjoiVW5saW1pdGVkIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9hcGljb250ZXh0IjoiL2VjaG8vdjEiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3ZlcnNpb24iOiJ2MSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdGllciI6IkJyb256ZSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMva2V5dHlwZSI6IlBST0RVQ1RJT04iLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3VzZXJ0eXBlIjoiQVBQTElDQVRJT04iLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2VuZHVzZXIiOiJhZGRkcm9wQGNhcmJvbi5zdXBlciIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvZW5kdXNlclRlbmFudElkIjoiLTEyMzQiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2NsaWVudF9pZCI6IjVnekxqTVVjeDdxdXQzTXVTZjl4cjhHVjJCQWEiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3Jlc3Rfb2ZfbmFtZSI6IkFkZCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfcGVyc29uX2lkIjoiMzc3MjI4MDYyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9zb3J0X25hbWUiOiJEcm9wLCBBZGQiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X2NsYWltX3NvdXJjZSI6IkNMSUVOVF9TVUJTQ1JJQkVSIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9uZXRfaWQiOiJhZGRkcm9wIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9zdWJzY3JpYmVyX25ldF9pZCI6ImFkZGRyb3AiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25hbWVfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfc3VybmFtZSI6IkRyb3AiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3N1cm5hbWVfcG9zaXRpb24iOiJMIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9uYW1lX3ByZWZpeCI6IiAiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X2J5dV9pZCI6IjY0OTAxOTk2NSIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfcHJlZmVycmVkX2ZpcnN0X25hbWUiOiJBZGQifQ.luAysmbldL0Hn1PO1TeHSba79tiVwnaEFLPMknsX5xegqExrJXs_FEge8R7PWj-KnjCMZt1QZbUeDz9boBWednXORSIHOk8TIZzM1hc3kM883sQXRbe9hiTfnoWf0zN2i9B6LBV1vqSFgJu7-PP_kAk0E1kfi7TcbWjecYc9H6vBijHrguh-WvwLuHg5qjC7en-FWcoYO_yM1oWvNajrUUdFbW6WC7lgkvnAPqreNlCuRA23uk45incuMNyFtldlMVOtAsqxRFgpydnujmnuP-l8gU2L1zFXdOkj-gTmq4v-sMCS2crrYW4MIVy5ObqlsQMOisjqturQLuxLo9fYpQ";
 
-        $this->assertSame(false, BYUJWT::validateJWT($expiredJWT));
-        $this->assertInstanceOf('Firebase\JWT\ExpiredException', BYUJWT::$lastException);
+        $this->assertSame(false, $this->jwt->validateJWT($expiredJWT));
+        $this->assertInstanceOf('Firebase\JWT\ExpiredException', $this->jwt->lastException);
+    }
+
+    public function testUnallowedAlgorithm()
+    {
+        $badJwt = JWT::encode(['key' => 'val'], 'dummy key');
+        $this->assertSame(false, $this->jwt->validateJWT($badJwt));
+        $this->assertEquals('Algorithm not allowed', $this->jwt->lastException->getMessage());
     }
 
     public function testJWTWithNoExpiration()
     {
+//TODO: complete Guzzle mock, so we can generate internal dummy JWTs for testing
         //Validation should be false when Expiration does not exist in an otherwise valid JWT
-        $decoded = BYUJWT::decode(static::$validJWT);
-        unset($decoded['exp']);
-        $badJwt = JWT::encode($decoded, BYUJWT::getPublicKey());
-
-        $this->assertSame(false, BYUJWT::validateJWT($badJwt));
-        $this->assertInstanceOf('BYU\JWT\NoExpirationException', BYUJWT::$lastException);
+//        $badJwt = JWT::encode(['dummy' => 'data'], static::$dummyKey, 'RS256');
+//        $this->assertSame(false, $this->jwt->validateJWT($badJwt));
+//        $this->assertInstanceOf('BYU\JWT\NoExpirationException', $this->jwt->lastException);
     }
 
     public function testHeaderConstants()
@@ -132,12 +141,12 @@ final class BYUJWTTest extends TestCase
 
     public function testJTWValidateSuccesful()
     {
-        $this->assertSame(true, BYUJWT::validateJWT(static::$validJWT));
+        $this->assertSame(true, $this->jwt->validateJWT(static::$validJWT));
     }
 
     public function testJTWDecodeSuccesful()
     {
-        $decodedJwt = BYUJWT::decode(static::$validJWT);
+        $decodedJwt = $this->jwt->decode(static::$validJWT);
         $this->assertNotEmpty($decodedJwt);
         $this->assertEquals('https://api.byu.edu', $decodedJwt['iss']);
         $this->assertEquals(static::$credentials->client_id, $decodedJwt['http://wso2.org/claims/client_id']);
