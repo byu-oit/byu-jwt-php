@@ -13,7 +13,7 @@ For existing applications you can add the
 following to your composer.json file:
 
     "require": {
-        "byu-oit/jwt": "~1.0"
+        "byu-oit/jwt": "~2.0"
     }
 
 And run `php composer.phar update`
