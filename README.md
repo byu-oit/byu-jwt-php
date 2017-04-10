@@ -2,6 +2,10 @@
 
 Basic JWT Decoding and Validation for calls from BYU's API repository
 
+# Requirements
+* PHP 5.4+
+* OpenSSL extension
+
 ## Installing via composer
 
 Install into your project using [composer](http://getcomposer.org).
@@ -19,7 +23,7 @@ And run `php composer.phar update`
 The most common use case is simply decoding a JWT:
 ```php
 try {
-    $decoded = BYUJWT::decode($jwt);
+    $decoded = (new BYUJWT)->decode($jwt);
 } catch (Exception $e) {
     //JWT was not valid, do something
 }

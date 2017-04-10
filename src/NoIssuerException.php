@@ -16,6 +16,6 @@
 
 namespace BYU\JWT;
 
-class NoExpirationException extends \UnexpectedValueException
+class NoIssuerException extends \UnexpectedValueException
 {
 }

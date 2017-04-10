@@ -20,56 +20,56 @@ use Exception;
 use Firebase\JWT\JWT;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use phpseclib\File\X509;
 
 /**
- * Provides helpful functions to retrieve a specified BYU .well-known URL and verify BYU signed JWTs
- *
- * @property boolean $cacheWellKnowns Can be set to enable or disable caching of the responses from well known URLs
+ * Provides helpful functions to retrieve a specified BYU
+ * .well-known URL and verify BYU signed JWTs
  */
 class BYUJWT
 {
-    public static $wellKnownHost = 'https://api.byu.edu';
-    public static $useCache = true;
-    public static $lastException;
-    protected static $cache = [];
-    protected static $client;
+    protected $client;
+    protected $cache = [];
+
+    public $lastException;
 
     const BYU_JWT_HEADER_CURRENT = "X-JWT-Assertion";
     const BYU_JWT_HEADER_ORIGINAL = "X-JWT-Assertion-Original";
 
     /**
-     * Clear cache, reset variables
+     * Default constructor
+     *
+     * @param type $settings Override default settings:
+     *   - "host" for well-known host
+     *   - "client" to override HttpClient for testing purposes
      *
      * @return void
      */
-    public static function reset()
+    public function __construct($settings = [])
     {
-        static::$wellKnownHost = 'https://api.byu.edu';
-        static::$useCache = true;
-        static::$lastException = null;
-        static::$cache = [];
+        if (empty($settings['client'])) {
+            $this->client = new Client();
+        } else {
+            $this->client = $settings['client'];
+        }
     }
 
     /**
      * Get the response of the specified .well-known URL.
-     * If cacheWellKnowns is set to true then it returns the previously retrieved response.
      *
      * @return object Parsed JSON response from the well known URL
      */
-    public static function getWellKnown()
+    public function getWellKnown()
     {
-        if (static::$useCache) {
-            if (array_key_exists(static::$wellKnownHost, static::$cache) && array_key_exists('well-known', static::$cache[static::$wellKnownHost])) {
-                return static::$cache[static::$wellKnownHost]['well-known'];
-            }
-            static::$cache[static::$wellKnownHost]['well-known'] = null;
+        $cached = $this->getCache('wellKnown');
+        if (!empty($cached)) {
+            return $cached;
         }
 
         try {
-            $response = static::client()->get(trim(static::$wellKnownHost, '/') . '/.well-known/openid-configuration');
+            $wellKnownUrl = 'https://api.byu.edu/.well-known/openid-configuration';
+            $response = $this->client->get($wellKnownUrl);
         } catch (RequestException $e) {
-            static::$lastException = $e;
+            $this->lastException = $e;
             return null;
         }
 
@@ -78,23 +78,9 @@ class BYUJWT
             return null;
         }
 
-        if (static::$useCache) {
-            static::$cache[static::$wellKnownHost]['well-known'] = $output;
-        }
+        $this->setCache('wellKnown', $output);
 
         return $output;
-    }
-
-    /**
-     * Override the base "well known URL"
-     *
-     * @param string $host New well known URL
-     *
-     * @return void
-     */
-    public static function setWellKnownHost($host)
-    {
-        static::$wellKnownHost = $host;
     }
 
     /**
@@ -102,24 +88,22 @@ class BYUJWT
      *
      * @return string
      */
-    public static function getPublicKey()
+    public function getPublicKey()
     {
-        if (static::$useCache) {
-            if (array_key_exists(static::$wellKnownHost, static::$cache) && array_key_exists('public-key', static::$cache[static::$wellKnownHost])) {
-                return static::$cache[static::$wellKnownHost]['public-key'];
-            }
-            static::$cache[static::$wellKnownHost]['public-key'] = null;
+        $cached = $this->getCache('publicKey');
+        if (!empty($cached)) {
+            return $cached;
         }
 
-        $wellKnown = static::getWellKnown();
+        $wellKnown = $this->getWellKnown();
         if (empty($wellKnown->jwks_uri)) {
             return null;
         }
 
         try {
-            $response = static::client()->get($wellKnown->jwks_uri);
+            $response = $this->client->get($wellKnown->jwks_uri);
         } catch (RequestException $e) {
-            static::$lastException = $e;
+            $this->lastException = $e;
             return null;
         }
 
@@ -128,15 +112,18 @@ class BYUJWT
             return null;
         }
 
-        $X509 = new X509();
-        if (!$X509->loadX509($jwks->keys[0]->x5c[0])) {
+        $keyResource = openssl_pkey_get_public(
+            "-----BEGIN CERTIFICATE-----\n"
+            . $jwks->keys[0]->x5c[0]
+            . "\n-----END CERTIFICATE-----"
+        );
+        if (!$keyResource) {
             return null;
         }
+        $key = openssl_pkey_get_details($keyResource)['key'];
 
-        $key = (string)$X509->getPublicKey();
-        if (static::$useCache) {
-            static::$cache[static::$wellKnownHost]['public-key'] = $key;
-        }
+        $this->setCache('publicKey', $key);
+
         return $key;
     }
 
@@ -147,15 +134,16 @@ class BYUJWT
      *
      * @return bool true if $jwt is a valid JWT, false if not
      */
-    public static function validateJWT($jwt)
+    public function validateJWT($jwt)
     {
         try {
-            $decoded = static::decode($jwt);
+            $decoded = $this->decode($jwt);
             return !empty($decoded);
         } catch (Exception $e) {
-            //For simple true/false validation we don't throw exceptions; just return false
-            //but store exception in case further details are wanted
-            static::$lastException = $e;
+            //For simple true/false validation we don't throw exceptions;
+            //just return false but store exception in case further
+            //details are wanted
+            $this->lastException = $e;
             return false;
         }
     }
@@ -167,38 +155,67 @@ class BYUJWT
      *
      * @return object decoded JWT
      *
-     * @throws Exception Various exceptions for various problems with JWT (see Firebase\JWT\JWT::decode for details)
+     * @throws Exception Various exceptions for various problems with JWT
+     *         (see Firebase\JWT\JWT::decode for details)
      */
-    public static function decode($jwt)
+    public function decode($jwt)
     {
-        $key = static::getPublicKey();
-        $decodedObject = JWT::decode($jwt, $key, ['HS256', 'RS256', 'HS512', 'HS384']);
+        $wellKnown = $this->getWellKnown();
+        $key = $this->getPublicKey();
+        $decodedObject = JWT::decode(
+            $jwt,
+            $key,
+            $wellKnown->id_token_signing_alg_values_supported
+        );
+
+        //Firebase\JWT\JWT::decode does not verify that some required
+        //fields actually exist
+        if (empty($decodedObject->iss)) {
+            throw new NoIssuerException('No issuer in JWT');
+        }
+        if ($decodedObject->iss != $wellKnown->issuer) {
+            throw new BadIssuerException('JWT issuer does not match well-known');
+        }
+        if (empty($decodedObject->exp)) {
+            //Firebase\JWT\JWT does throw an exception if 'exp' field is in
+            //the past, but not if it's completely missing
+            throw new NoExpirationException('No expiration in JWT');
+        }
 
         //JWT::decode returns at stdClass object, but iterating through keys is much
         //simpler with an array. So here's a quick Object-to-Array conversion
         $decoded = json_decode(json_encode($decodedObject), true);
 
-        if (empty($decoded['exp'])) {
-            //Firebase\JWT\JWT::decode does not throw an error if "exp" does not exist,
-            //although it does throw an error if it exists but has already passed
-            //For BYU we want to ensure that it does exist, as well as being valid
-            throw new NoExpirationException('No expiration in JWT');
-        }
-
         return $decoded;
     }
 
     /**
-     * Simple factory for GuzzleHttp\Client so we only have one instance
+     * Simple cache reader. Implemented as a function so that if you don't
+     * want caching, you can make a subclass that overrides this
+     * function and always returns false
      *
-     * @return \GuzzleHttp\Client
+     * @param string $key Cache key
+     *
+     * @return various
      */
-    protected static function client()
+    protected function getCache($key)
     {
-        if (empty(static::$client)) {
-            static::$client = new Client();
+        if (array_key_exists($key, $this->cache)) {
+            return $this->cache[$key];
         }
+        return false;
+    }
 
-        return static::$client;
+    /**
+     * Simple cache setter. See comment for "getCache" above.
+     *
+     * @param string  $key   Cache key
+     * @param various $value Cache value
+     *
+     * @return void
+     */
+    protected function setCache($key, $value)
+    {
+        $this->cache[$key] = $value;
     }
 }
