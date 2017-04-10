@@ -20,7 +20,6 @@ use Exception;
 use Firebase\JWT\JWT;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use phpseclib\File\X509;
 
 /**
  * Provides helpful functions to retrieve a specified BYU .well-known URL and verify BYU signed JWTs
@@ -111,11 +110,11 @@ class BYUJWT
             return null;
         }
 
-        $X509 = new X509();
-        if (!$X509->loadX509($jwks->keys[0]->x5c[0])) {
+        $keyResource = openssl_pkey_get_public("-----BEGIN CERTIFICATE-----\n{$jwks->keys[0]->x5c[0]}\n-----END CERTIFICATE-----");
+        if (!$keyResource) {
             return null;
         }
-        $key = (string)$X509->getPublicKey();
+        $key = openssl_pkey_get_details($keyResource)['key'];
 
         $this->setCache('publicKey', $key);
 
