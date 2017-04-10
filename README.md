@@ -2,6 +2,10 @@
 
 Basic JWT Decoding and Validation for calls from BYU's API repository
 
+# Requirements
+* PHP 5.4+
+* OpenSSL extension
+
 ## Installing via composer
 
 Install into your project using [composer](http://getcomposer.org).

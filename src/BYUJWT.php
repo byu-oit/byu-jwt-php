@@ -22,13 +22,11 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 
 /**
- * Provides helpful functions to retrieve a specified BYU .well-known URL and verify BYU signed JWTs
- *
- * @property boolean $cacheWellKnowns Can be set to enable or disable caching of the responses from well known URLs
+ * Provides helpful functions to retrieve a specified BYU
+ * .well-known URL and verify BYU signed JWTs
  */
 class BYUJWT
 {
-    protected $wellKnownHost;
     protected $client;
     protected $cache = [];
 
@@ -48,8 +46,11 @@ class BYUJWT
      */
     public function __construct($settings = [])
     {
-        $this->wellKnownHost = empty($settings['host']) ? 'https://api.byu.edu' : $settings['host'];
-        $this->client = empty($settings['client']) ? new Client() : $settings['client'];
+        if (empty($settings['client'])) {
+            $this->client = new Client();
+        } else {
+            $this->client = $settings['client'];
+        }
     }
 
     /**
@@ -65,7 +66,8 @@ class BYUJWT
         }
 
         try {
-            $response = $this->client->get(trim($this->wellKnownHost, '/') . '/.well-known/openid-configuration');
+            $wellKnownUrl = 'https://api.byu.edu/.well-known/openid-configuration';
+            $response = $this->client->get($wellKnownUrl);
         } catch (RequestException $e) {
             $this->lastException = $e;
             return null;
@@ -110,7 +112,11 @@ class BYUJWT
             return null;
         }
 
-        $keyResource = openssl_pkey_get_public("-----BEGIN CERTIFICATE-----\n{$jwks->keys[0]->x5c[0]}\n-----END CERTIFICATE-----");
+        $keyResource = openssl_pkey_get_public(
+            "-----BEGIN CERTIFICATE-----\n"
+            . $jwks->keys[0]->x5c[0]
+            . "\n-----END CERTIFICATE-----"
+        );
         if (!$keyResource) {
             return null;
         }
@@ -134,8 +140,9 @@ class BYUJWT
             $decoded = $this->decode($jwt);
             return !empty($decoded);
         } catch (Exception $e) {
-            //For simple true/false validation we don't throw exceptions; just return false
-            //but store exception in case further details are wanted
+            //For simple true/false validation we don't throw exceptions;
+            //just return false but store exception in case further
+            //details are wanted
             $this->lastException = $e;
             return false;
         }
@@ -148,24 +155,36 @@ class BYUJWT
      *
      * @return object decoded JWT
      *
-     * @throws Exception Various exceptions for various problems with JWT (see Firebase\JWT\JWT::decode for details)
+     * @throws Exception Various exceptions for various problems with JWT
+     *         (see Firebase\JWT\JWT::decode for details)
      */
     public function decode($jwt)
     {
         $wellKnown = $this->getWellKnown();
         $key = $this->getPublicKey();
-        $decodedObject = JWT::decode($jwt, $key, $wellKnown->id_token_signing_alg_values_supported);
+        $decodedObject = JWT::decode(
+            $jwt,
+            $key,
+            $wellKnown->id_token_signing_alg_values_supported
+        );
+
+        //Firebase\JWT\JWT::decode does not verify that some required
+        //fields actually exist
+        if (empty($decodedObject->iss)) {
+            throw new NoIssuerException('No issuer in JWT');
+        }
+        if ($decodedObject->iss != $wellKnown->issuer) {
+            throw new BadIssuerException('JWT issuer does not match well-known');
+        }
+        if (empty($decodedObject->exp)) {
+            //Firebase\JWT\JWT does throw an exception if 'exp' field is in
+            //the past, but not if it's completely missing
+            throw new NoExpirationException('No expiration in JWT');
+        }
 
         //JWT::decode returns at stdClass object, but iterating through keys is much
         //simpler with an array. So here's a quick Object-to-Array conversion
         $decoded = json_decode(json_encode($decodedObject), true);
-
-        if (empty($decoded['exp'])) {
-            //Firebase\JWT\JWT::decode does not throw an error if "exp" does not exist,
-            //although it does throw an error if it exists but has already passed
-            //For BYU we want to ensure that it does exist, as well as being valid
-            throw new NoExpirationException('No expiration in JWT');
-        }
 
         return $decoded;
     }
@@ -175,7 +194,7 @@ class BYUJWT
      * want caching, you can make a subclass that overrides this
      * function and always returns false
      *
-     * @param string $key
+     * @param string $key Cache key
      *
      * @return various
      */
@@ -190,8 +209,8 @@ class BYUJWT
     /**
      * Simple cache setter. See comment for "getCache" above.
      *
-     * @param string $key
-     * @param various $value
+     * @param string  $key   Cache key
+     * @param various $value Cache value
      *
      * @return void
      */
