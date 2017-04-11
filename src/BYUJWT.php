@@ -186,7 +186,83 @@ class BYUJWT
         //simpler with an array. So here's a quick Object-to-Array conversion
         $decoded = json_decode(json_encode($decodedObject), true);
 
-        return $decoded;
+        return $this->parseClaims($decoded);
+    }
+
+    /**
+     * Parse standard set of 'http://XXXX/claims/YYYY' claims and save as
+     * hierarchal array data
+     *
+     * @param array $jwt
+     *
+     * @return array
+     */
+    public function parseClaims($jwt)
+    {
+        //PHP 7 has convenient "??" operator, but we're making this
+        //5.4+ compatible. So this is a simple "safe array access" that
+        //won't cause warnings or errors if we try to get a non-existent key
+        $get = function ($arr, $key) {
+            return array_key_exists($key, $arr) ? $arr[$key] : null;
+        };
+
+        $hasResourceOwner = array_key_exists('http://byu.edu/claims/resourceowner_byu_id', $jwt);
+
+        $jwt['byu']['client'] = [
+            'byuId' =>              $get($jwt, 'http://byu.edu/claims/client_byu_id'),
+            'claimSource' =>        $get($jwt, 'http://byu.edu/claims/client_claim_source'),
+            'netId' =>              $get($jwt, 'http://byu.edu/claims/client_net_id'),
+            'personId' =>           $get($jwt, 'http://byu.edu/claims/client_person_id'),
+            'preferredFirstName' => $get($jwt, 'http://byu.edu/claims/client_preferred_first_name'),
+            'prefix' =>             $get($jwt, 'http://byu.edu/claims/client_name_prefix'),
+            'restOfName' =>         $get($jwt, 'http://byu.edu/claims/client_rest_of_name'),
+            'sortName' =>           $get($jwt, 'http://byu.edu/claims/client_sort_name'),
+            'subscriberNetId' =>    $get($jwt, 'http://byu.edu/claims/client_subscriber_net_id'),
+            'suffix' =>             $get($jwt, 'http://byu.edu/claims/client_name_prefix'),
+            'surname' =>            $get($jwt, 'http://byu.edu/claims/client_surname'),
+            'surnamePosition' =>    $get($jwt, 'http://byu.edu/claims/client_surname_position')
+        ];
+
+        if ($hasResourceOwner) {
+            $jwt['byu']['resourceOwner'] = [
+                'byuId' =>              $get($jwt, 'http://byu.edu/claims/resourceowner_byu_id'),
+                'netId' =>              $get($jwt, 'http://byu.edu/claims/resourceowner_net_id'),
+                'personId' =>           $get($jwt, 'http://byu.edu/claims/resourceowner_person_id'),
+                'preferredFirstName' => $get($jwt, 'http://byu.edu/claims/resourceowner_preferred_first_name'),
+                'prefix' =>             $get($jwt, 'http://byu.edu/claims/resourceowner_prefix'),
+                'restOfName' =>         $get($jwt, 'http://byu.edu/claims/resourceowner_rest_of_name'),
+                'sortName' =>           $get($jwt, 'http://byu.edu/claims/resourceowner_sort_name'),
+                'suffix' =>             $get($jwt, 'http://byu.edu/claims/resourceowner_suffix'),
+                'surname' =>            $get($jwt, 'http://byu.edu/claims/resourceowner_surname'),
+                'surnamePosition' =>    $get($jwt, 'http://byu.edu/claims/resourceowner_surname_position')
+            ];
+        }
+
+        $webresCheckKey = $hasResourceOwner ? 'resourceOwner' : 'client';
+        $jwt['byu']['webresCheck'] = [
+            'byuId' => $jwt['byu'][$webresCheckKey]['byuId'],
+            'netId' => $jwt['byu'][$webresCheckKey]['netId'],
+            'personId' => $jwt['byu'][$webresCheckKey]['personId']
+        ];
+
+        $jwt['wso2'] = [
+            'apiContext' =>         $get($jwt, 'http://wso2.org/claims/apicontext'),
+            'application' => [
+                'id' =>             $get($jwt, 'http://wso2.org/claims/applicationid'),
+                'name' =>           $get($jwt, 'http://wso2.org/claims/applicationname'),
+                'tier' =>           $get($jwt, 'http://wso2.org/claims/applicationtier')
+            ],
+            'clientId' =>           $get($jwt, 'http://wso2.org/claims/client_id'),
+            'endUser' =>            $get($jwt, 'http://wso2.org/claims/enduser'),
+            'endUserTenantId' =>    $get($jwt, 'http://wso2.org/claims/enduserTenantId'),
+            'keyType' =>            $get($jwt, 'http://wso2.org/claims/keytype'),
+            'subscriber' =>         $get($jwt, 'http://wso2.org/claims/subscriber'),
+            'tier' =>               $get($jwt, 'http://wso2.org/claims/tier'),
+            'userType' =>           $get($jwt, 'http://wso2.org/claims/usertype'),
+            'version' =>            $get($jwt, 'http://wso2.org/claims/version')
+        ];
+
+        return $jwt;
     }
 
     /**
