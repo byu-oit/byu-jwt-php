@@ -292,7 +292,7 @@ final class BYUJWTTest extends TestCase
     public function testRealWellKnown()
     {
         //one "live" test to https://api.byu.edu
-        $this->assertNotEmpty((new BYUJWT)->getWellKnown());
+        $this->assertNotEmpty((new BYUJWT)->getPublicKey());
     }
 
     protected function mockClient($responseTexts = [])
