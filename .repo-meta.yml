@@ -1,0 +1,57 @@
+--- 
+$schemaver: 1.1
+name: byu-jwt-php
+type: Library
+aliases:
+short_description: None
+assignment_group: gro:AD-Front End Technologies and Applications
+notes: 
+maintained_by:
+  - snelg
+  - joshgubler
+  - pauldeden
+  - eric-nord
+  - bwinterton
+  - ndpete
+  - casture
+developed_by_byu: True
+ddd:
+  business_domain: 
+  ubiquitous_language_url: 
+  context_map_url: 
+links:
+  system_documentation_url: https://github.com/byu-oit-appdev/byu-jwt-php
+  source_repo_url: https://github.com/byu-oit-appdev/byu-jwt-php
+  swagger_urls:
+microservice: False
+technologies_used:
+  - PHP
+stages:
+  production:
+    urls:
+      product_page: 
+      physical_url: 
+      virtual_url: 
+    hosting_location: 
+    aws_account: 
+    relationships: 
+      depends_on:
+        db_read_write:
+        db_read_only:
+        software:
+      supports:
+        software:
+        service:
+      reverse_proxy: 
+      runs_on:
+        server_cluster:
+        virtual_server:
+        rack_server:
+        blade_server:
+tags:
+  data-sensitivity: confidential
+  env: prd
+  app: byu-jwt-php
+  team: gro:AD-Front End Technologies and Applications
+federation_json_url: https://raw.githubusercontent.com/byu-oit-appdev/byu-jwt-php/master/.repo-meta.yml
+
