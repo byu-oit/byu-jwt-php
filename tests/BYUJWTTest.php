@@ -105,6 +105,17 @@ final class BYUJWTTest extends TestCase
         $this->assertEmpty($BYUJWT->getWellKnown());
     }
 
+    public function testBadWellKnownUrl()
+    {
+        $BYUJWT = new BYUJWT(['wellKnownUrl' => 'badprotocol://fakeurl']);
+
+        $this->assertEmpty($BYUJWT->getWellKnown());
+        $this->assertInstanceOf(
+            'GuzzleHttp\Exception\RequestException',
+            $BYUJWT->lastException
+        );
+    }
+
     public function testMissingJwks()
     {
         $client = $this->mockClient([static::$openid]);

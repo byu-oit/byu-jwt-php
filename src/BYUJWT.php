@@ -30,6 +30,7 @@ class BYUJWT
 {
     protected $client;
     protected $cache = [];
+    protected $wellKnownUrl;
 
     public $lastException;
 
@@ -52,6 +53,11 @@ class BYUJWT
         } else {
             $this->client = $settings['client'];
         }
+
+        $this->wellKnownUrl = 'https://api.byu.edu/.well-known/openid-configuration';
+        if (!empty($settings['wellKnownUrl'])) {
+            $this->wellKnownUrl = $settings['wellKnownUrl'];
+        }
     }
 
     /**
@@ -67,8 +73,7 @@ class BYUJWT
         }
 
         try {
-            $wellKnownUrl = 'https://api.byu.edu/.well-known/openid-configuration';
-            $response = $this->client->get($wellKnownUrl);
+            $response = $this->client->get($this->wellKnownUrl);
         } catch (RequestException $e) {
             $this->lastException = $e;
             return null;
