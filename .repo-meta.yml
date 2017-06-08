@@ -20,8 +20,8 @@ ddd:
   ubiquitous_language_url: 
   context_map_url: 
 links:
-  system_documentation_url: https://github.com/byu-oit-appdev/byu-jwt-php
-  source_repo_url: https://github.com/byu-oit-appdev/byu-jwt-php
+  system_documentation_url: https://github.com/byu-oit/byu-jwt-php
+  source_repo_url: https://github.com/byu-oit/byu-jwt-php
   swagger_urls:
 microservice: False
 technologies_used:
@@ -53,5 +53,5 @@ tags:
   env: prd
   app: byu-jwt-php
   team: gro:AD-Front End Technologies and Applications
-federation_json_url: https://raw.githubusercontent.com/byu-oit-appdev/byu-jwt-php/master/.repo-meta.yml
+federation_json_url: https://raw.githubusercontent.com/byu-oit/byu-jwt-php/master/.repo-meta.yml
 
