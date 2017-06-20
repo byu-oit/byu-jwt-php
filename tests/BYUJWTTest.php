@@ -18,40 +18,38 @@ namespace BYU\JWT\Test;
 
 use BYU\JWT\BYUJWT;
 use Firebase\JWT\JWT;
-use GuzzleHttp\Client;
-use GuzzleHttp\Message\Response;
-use GuzzleHttp\Stream\Stream;
-use GuzzleHttp\Subscriber\Mock;
 use PHPUnit\Framework\TestCase;
 
 /**
+ * Using PHP-VCR to mock network requests.
+ * For these mock network requests, we replaced the actual BYU public key
+ * with a self-generated key using the included "testing.key" private key.
+ * This allows us to generate "valid" JWT data for these tests without
+ * requiring the inclusion of the real BYU private key
+ *
  * @covers \BYU\JWT\BYUJWT
  */
 final class BYUJWTTest extends TestCase
 {
 
-    protected static $openid;
-    protected static $jwks;
     protected static $privateKey;
 
     public static function setUpBeforeClass()
     {
-        static::$jwks = file_get_contents(dirname(__FILE__) . '/jwks.json');
-        static::$openid = file_get_contents(dirname(__FILE__) . '/openid.json');
-
         $keyData = file_get_contents(dirname(__FILE__) . '/testing.key');
         static::$privateKey = openssl_pkey_get_private($keyData);
     }
 
     public function setUp()
     {
-        $client = $this->mockClient([static::$openid, static::$jwks]);
-
-        $this->BYUJWT = new BYUJWT(['client' => $client]);
+        $this->BYUJWT = new BYUJWT();
 
         parent::setUp();
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testJwtDecode()
     {
         $jwt = JWT::encode(
@@ -64,6 +62,9 @@ final class BYUJWTTest extends TestCase
         $this->assertEquals('test', $decodedJwt['data']);
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testJwtValidate()
     {
         $jwt = JWT::encode(
@@ -73,6 +74,9 @@ final class BYUJWTTest extends TestCase
         $this->assertSame(true, $this->BYUJWT->validateJWT($jwt));
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testWellKnown()
     {
         $wellKnown = $this->BYUJWT->getWellKnown();
@@ -80,6 +84,9 @@ final class BYUJWTTest extends TestCase
         $this->assertEquals($wellKnown->issuer, 'https://api.byu.edu');
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testPublicKey()
     {
         $key = $this->BYUJWT->getPublicKey();
@@ -88,21 +95,21 @@ final class BYUJWTTest extends TestCase
         $this->assertEquals($key, $cachedKey);
     }
 
+    /**
+     * @vcr missing_wellknown.yml
+     */
     public function testMissingWellKnown()
     {
-        $client = $this->mockClient();
-        $BYUJWT = new BYUJWT(['client' => $client]);
-
-        $this->assertEmpty($BYUJWT->getWellKnown());
-        $this->assertEmpty($BYUJWT->getPublicKey());
+        $this->assertEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKey());
     }
 
+    /**
+     * @vcr bad_wellknown.yml
+     */
     public function testBadWellKnown()
     {
-        $client = $this->mockClient(['bad JSON!}}}']);
-        $BYUJWT = new BYUJWT(['client' => $client]);
-
-        $this->assertEmpty($BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getWellKnown());
     }
 
     public function testBadWellKnownUrl()
@@ -116,32 +123,31 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr missing_jwks.yml
+     */
     public function testMissingJwks()
     {
-        $client = $this->mockClient([static::$openid]);
-        $BYUJWT = new BYUJWT(['client' => $client]);
-
-        $this->assertNotEmpty($BYUJWT->getWellKnown());
-        $this->assertEmpty($BYUJWT->getPublicKey());
+        $this->assertNotEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKey());
     }
 
+    /**
+     * @vcr bad_jwks.yml
+     */
     public function testBadJwks()
     {
-        $client = $this->mockClient([static::$openid, 'bad JSON!}}}']);
-        $BYUJWT = new BYUJWT(['client' => $client]);
-
-        $this->assertNotEmpty($BYUJWT->getWellKnown());
-        $this->assertEmpty($BYUJWT->getPublicKey());
+        $this->assertNotEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKey());
     }
 
+    /**
+     * @vcr bad_jwks_key.yml
+     */
     public function testBadJwksKey()
     {
-        $badKey = ['keys' => [['x5c' => ['bad RSA key!']]]];
-        $client = $this->mockClient([static::$openid, json_encode($badKey)]);
-        $BYUJWT = new BYUJWT(['client' => $client]);
-
-        $this->assertNotEmpty($BYUJWT->getWellKnown());
-        $this->assertEmpty($BYUJWT->getPublicKey());
+        $this->assertNotEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKey());
     }
 
     public function testInvalidJWT()
@@ -153,6 +159,9 @@ final class BYUJWTTest extends TestCase
         $this->assertInstanceOf('Exception', $this->BYUJWT->lastException);
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testExpiredJWT()
     {
         $jwt = JWT::encode(
@@ -167,6 +176,9 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testUnallowedAlgorithm()
     {
         //JWT::encode default algorithm is "HS256"
@@ -178,6 +190,9 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testJwtWithNoIssuer()
     {
         $badJwt = JWT::encode(['dummy' => 'data'], static::$privateKey, 'RS256');
@@ -188,6 +203,9 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testJwtWithWrongIssuer()
     {
         $badJwt = JWT::encode(
@@ -202,6 +220,9 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testJwtWithNoExpiration()
     {
         $badJwt = JWT::encode(
@@ -216,6 +237,9 @@ final class BYUJWTTest extends TestCase
         );
     }
 
+    /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
     public function testParsedClaims()
     {
         $json = '{
@@ -300,25 +324,12 @@ final class BYUJWTTest extends TestCase
         $this->assertEquals("v1", $decodedJwt['wso2']['version']);
     }
 
+    /**
+     * NOTE: no "@vcr" notation here, so this test is to actual live data
+     */
     public function testRealWellKnown()
     {
         //one "live" test to https://api.byu.edu
         $this->assertNotEmpty((new BYUJWT)->getPublicKey());
-    }
-
-    protected function mockClient($responseTexts = [])
-    {
-        $responses = [];
-        foreach ($responseTexts as $text) {
-            $body = Stream::factory($text);
-            $responses[] = new Response(200, [], $body);
-        }
-
-        $mock = new Mock($responses);
-
-        $client = new Client();
-        $client->getEmitter()->attach($mock);
-
-        return $client;
     }
 }

@@ -1,0 +1,47 @@
+
+-
+    request:
+        method: GET
+        url: 'https://api.byu.edu/.well-known/openid-configuration'
+        headers:
+            Host: api.byu.edu
+            Accept-Encoding: null
+            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Tue, 20 Jun 2017 21:15:47 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Tue, 12 Jan 2016 17:36:02 GMT'
+            ETag: '"41b31-1fb-529267cbfe480"'
+            Accept-Ranges: bytes
+            Content-Length: '476'
+            Content-Type: 'text/html; charset=UTF-8'
+        body: "{\"issuer\":\"https://api.byu.edu\",\"authorization_endpoint\":\"https://api.byu.edu/authorize\",\"token_endpoint\":\"https://api.byu.edu/token\",\"userinfo_endpoint\":\"https://wso2-is.byu.edu/oauth2/userinfo?schema=openid\",\"revocation_endpoint\":\"https://api.byu.edu/revoke\",\"jwks_uri\":\"https://api.byu.edu/.well-known/byucerts\",\"response_types_supported\":[\"code\",\"token\"],\"subject_types_supported\":[\"public\"],\"id_token_signing_alg_values_supported\":[\"RS256\"],\"scopes_supported\":[\"openid\"]}"
+-
+    request:
+        method: GET
+        url: 'https://api.byu.edu/.well-known/byucerts'
+        headers:
+            Host: api.byu.edu
+            Accept-Encoding: null
+            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Tue, 20 Jun 2017 21:15:47 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Tue, 12 Jan 2016 17:36:07 GMT'
+            ETag: '"c1adb-9a9-529267d0c2fc0"'
+            Accept-Ranges: bytes
+            Content-Length: '907'
+            Content-Type: 'text/html; charset=UTF-8'
+        body: "{\"keys\":[{\"x5c\":[\"MIICkjCCAfugAwIBAgIJALyC9FKTllw8MA0GCSqGSIb3DQEBCwUAMGExCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMQ4wDAYDVQQHDAVQcm92bzEMMAoGA1UECgwDQllVMQwwCgYDVQQLDANPSVQxFzAVBgNVBAMMDk9JVFVuaXRUZXN0aW5nMCAXDTE3MDQxMDE2MzAzNloYDzMwMTYwODExMTYzMDM2WjBhMQswCQYDVQQGEwJVUzENMAsGA1UECAwEVXRhaDEOMAwGA1UEBwwFUHJvdm8xDDAKBgNVBAoMA0JZVTEMMAoGA1UECwwDT0lUMRcwFQYDVQQDDA5PSVRVbml0VGVzdGluZzCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAz6TQNIGhcFvab+C9lNaG7C1AufGobrohW4f0f7Fy0oOlG1UH8TD+Gvbt+mkdRR5DYU8gDhzlpIsYPf164AMnjw9jaaxJU76+Mb9288cOlQ1VJSFsxR7d2cUHkdYnloTcGQL3L9qHYNhyYfx6tm5NqeFQ386TsLwo8J7msbwe7TsCAwEAAaNQME4wHQYDVR0OBBYEFBI9vj/V5NeohwtynBHszYNJICi4MB8GA1UdIwQYMBaAFBI9vj/V5NeohwtynBHszYNJICi4MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADgYEAVkjMyhQKWW+Ftyk/HYaHr5Z8RsZc+me7BNyNrk9qdzlYGmwC+M577jfh8j4ZuWIOLa7YKwwiQMVXFm5ORQK5eFCy7Q+ZVmc8+v/JjAxf7GE9ocynald5BTUjHJqZmSlUklJX7XN8ZWQBZpL3u3zWGdx67t37/964tg316jjHWWc=\"]}]}"

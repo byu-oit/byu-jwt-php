@@ -8,6 +8,7 @@
         "phpseclib/phpseclib": "~2.0.4"
     },
     "require-dev": {
+        "php-vcr/phpunit-testlistener-vcr": "~2.0",
         "phpunit/phpunit": "~5.0"
     },
     "autoload": {

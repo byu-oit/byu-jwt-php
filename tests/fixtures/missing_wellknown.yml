@@ -1,0 +1,24 @@
+
+-
+    request:
+        method: GET
+        url: 'https://api.byu.edu/.well-known/openid-configuration'
+        headers:
+            Host: api.byu.edu
+            Accept-Encoding: null
+            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '404'
+            message: 'Not Found'
+        headers:
+            Date: 'Tue, 20 Jun 2017 21:36:51 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Tue, 12 Jan 2016 17:36:02 GMT'
+            ETag: '"41b31-1fb-529267cbfe480"'
+            Accept-Ranges: bytes
+            Content-Length: '0'
+            Content-Type: 'text/html; charset=UTF-8'
+        body: ""

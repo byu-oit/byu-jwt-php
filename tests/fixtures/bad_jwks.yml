@@ -1,0 +1,47 @@
+
+-
+    request:
+        method: GET
+        url: 'https://api.byu.edu/.well-known/openid-configuration'
+        headers:
+            Host: api.byu.edu
+            Accept-Encoding: null
+            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Tue, 20 Jun 2017 21:43:58 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Tue, 12 Jan 2016 17:36:02 GMT'
+            ETag: '"c1adc-1fb-529267cbfe480"'
+            Accept-Ranges: bytes
+            Content-Length: '507'
+            Content-Type: 'text/html; charset=UTF-8'
+        body: "{\n\"issuer\": \"https://api.byu.edu\",\n\"authorization_endpoint\": \"https://api.byu.edu/authorize\",\n\"token_endpoint\": \"https://api.byu.edu/token\",\n\"userinfo_endpoint\": \"https://wso2-is.byu.edu/oauth2/userinfo?schema=openid\",\n\"revocation_endpoint\": \"https://api.byu.edu/revoke\",\n\"jwks_uri\": \"https://api.byu.edu/.well-known/byucerts\",\n\"response_types_supported\": [\n\"code\",\n\"token\"\n],\n\"subject_types_supported\": [\n\"public\"\n],\n\"id_token_signing_alg_values_supported\": [\n\"RS256\"\n],\n\"scopes_supported\": [\n\"openid\"\n]\n}\n"
+-
+    request:
+        method: GET
+        url: 'https://api.byu.edu/.well-known/byucerts'
+        headers:
+            Host: api.byu.edu
+            Accept-Encoding: null
+            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Tue, 20 Jun 2017 21:43:58 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Tue, 12 Jan 2016 17:36:07 GMT'
+            ETag: '"41b30-9a9-529267d0c2fc0"'
+            Accept-Ranges: bytes
+            Content-Length: '9'
+            Content-Type: 'text/html; charset=UTF-8'
+        body: "bad JSON!"

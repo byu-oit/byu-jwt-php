@@ -41,20 +41,15 @@ class BYUJWT
      * Default constructor
      *
      * @param type $settings Override default settings:
-     *   - "host" for well-known host
-     *   - "client" to override HttpClient for testing purposes
+     *   - "wellKnownUrl" for well-known host
      *
      * @return void
      */
     public function __construct($settings = [])
     {
-        if (empty($settings['client'])) {
-            $this->client = new Client();
-        } else {
-            $this->client = $settings['client'];
-        }
-
+        $this->client = new Client();
         $this->wellKnownUrl = 'https://api.byu.edu/.well-known/openid-configuration';
+
         if (!empty($settings['wellKnownUrl'])) {
             $this->wellKnownUrl = $settings['wellKnownUrl'];
         }
