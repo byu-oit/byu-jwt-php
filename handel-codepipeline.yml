@@ -1,0 +1,15 @@
+version: 1
+
+name: byu-jwt-php
+
+pipelines: 
+  prd:
+    phases:
+    - type: github
+      name: Source
+      owner: byu-oit
+      repo: byu-jwt-php
+      branch: master
+    - type: codebuild
+      name: Build
+      build_image: php
