@@ -19,10 +19,6 @@ namespace BYU\JWT\Test;
 use BYU\JWT\BYUJWT;
 use Firebase\JWT\JWT;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use VCR\Event\BeforePlaybackEvent;
-use VCR\VCR;
-use VCR\VCREvents;
 
 /**
  * Using PHP-VCR to mock network requests.
@@ -33,33 +29,10 @@ use VCR\VCREvents;
  *
  * @covers \BYU\JWT\BYUJWT
  */
-final class BYUJWTTest extends TestCase implements EventSubscriberInterface
+final class BYUJWTTest extends TestCase
 {
 
     protected static $privateKey;
-
-    /**
-     * Need to remove GuzzleHttp's default "User-Agent", which
-     * includes specific environment info, e.g.
-     * User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
-     * Otherwise, php-vcr fixtures will fail if running in an
-     * environment with different curl or php versions
-     */
-    public function __construct($name = null, array $data = [], $dataName = '')
-    {
-        parent::__construct($name, $data, $dataName);
-        VCR::getEventDispatcher()->addSubscriber($this);
-    }
-
-    public static function getSubscribedEvents()
-    {
-        return [VCREvents::VCR_BEFORE_PLAYBACK => 'onPlayback'];
-    }
-
-    public function onPlayback(BeforePlaybackEvent $event)
-    {
-        $event->getRequest()->removeHeader('User-Agent');
-    }
 
     public static function setUpBeforeClass()
     {
