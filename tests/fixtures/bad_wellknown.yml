@@ -6,7 +6,6 @@
         headers:
             Host: api.byu.edu
             Accept-Encoding: null
-            User-Agent: 'Guzzle/5.3.1 curl/7.54.1 PHP/7.0.19'
             Accept: null
     response:
         status:
