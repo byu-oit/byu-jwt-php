@@ -1,8 +1,8 @@
-$schemaver: 2.0
+$schemaver: '2.0'
 repo_url: https://github.com/byu-oit/byu-jwt-php
 software:
   - aliases:
-    assignment_group: 'gro:AD-Front End Technologies and Applications'
+    assignment_group: gro:AD-Front End Technologies and Applications
     ddd:
       business_domain:
       context_map_url:
@@ -22,7 +22,7 @@ software:
     microservice: false
     name: byu-jwt-php
     notes:
-    short_description: 'JWT Decoding and Validation for BYU API'
+    short_description: JWT Decoding and Validation for BYU API
     stages:
       production:
         hosting_location: Other
@@ -33,11 +33,11 @@ software:
     tags:
       app: byu-jwt-php
       data-sensitivity: confidential
-      team: 'gro:AD-Front End Technologies and Applications'
+      team: gro:AD-Front End Technologies and Applications
     technologies_used:
       - PHP
       - Composer
       - Handel-Codepipeline
-      - 'AWS CodeBuild'
-      - 'AWS CodePipeline'
+      - AWS CodeBuild
+      - AWS CodePipeline
     type: Library
