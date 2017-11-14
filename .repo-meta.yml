@@ -27,6 +27,9 @@ software:
     microservice: false
     technologies_used:
       - PHP
+      - Composer
+      - Handel-Codepipeline
+      - AWS CodeBuild
     stages:
         production:
             hosting_location: Other
