@@ -1,4 +1,4 @@
-$schemaver: '2.0'
+$schemaver: 2.1
 repo_url: https://github.com/byu-oit/byu-jwt-php
 software:
   - aliases:
@@ -30,10 +30,6 @@ software:
           supports:
             service:
             software:
-    tags:
-      app: byu-jwt-php
-      data-sensitivity: confidential
-      team: gro:AD-Front End Technologies and Applications
     technologies_used:
       - PHP
       - Composer
@@ -41,3 +37,4 @@ software:
       - AWS CodeBuild
       - AWS CodePipeline
     type: Library
+    data_sensitivity: confidential
