@@ -85,7 +85,7 @@ final class BYUJWTTest extends TestCase
     }
 
     /**
-     * @vcr ok_wellknown_and_jwks.yml
+     * @vcr ok_old_wellknown_and_jwks.yml
      */
     public function testPublicKey()
     {
@@ -96,12 +96,24 @@ final class BYUJWTTest extends TestCase
     }
 
     /**
+     * @vcr ok_wellknown_and_jwks.yml
+     */
+    public function testPublicKeys()
+    {
+        $keys = $this->BYUJWT->getPublicKeys();
+        $this->assertNotEmpty($keys);
+        $cachedKeys = $this->BYUJWT->getPublicKeys();
+        $this->assertEquals($keys, $cachedKeys);
+    }
+
+    /**
      * @vcr missing_wellknown.yml
      */
     public function testMissingWellKnown()
     {
         $this->assertEmpty($this->BYUJWT->getWellKnown());
         $this->assertEmpty($this->BYUJWT->getPublicKey());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
     /**
@@ -130,6 +142,10 @@ final class BYUJWTTest extends TestCase
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
         $this->assertEmpty($this->BYUJWT->getPublicKey());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
+        $this->assertSame(false, $this->BYUJWT->validateJWT("bad JWT!"));
+        $this->assertInstanceOf('Exception', $this->BYUJWT->lastException);
+        $this->assertEquals('Could not decode JWT', $this->BYUJWT->lastException->getMessage());
     }
 
     /**
@@ -139,6 +155,7 @@ final class BYUJWTTest extends TestCase
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
         $this->assertEmpty($this->BYUJWT->getPublicKey());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
     /**
@@ -148,6 +165,7 @@ final class BYUJWTTest extends TestCase
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
         $this->assertEmpty($this->BYUJWT->getPublicKey());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
     public function testInvalidJWT()
@@ -330,6 +348,24 @@ final class BYUJWTTest extends TestCase
     public function testRealWellKnown()
     {
         //one "live" test to https://api.byu.edu
-        $this->assertNotEmpty((new BYUJWT)->getPublicKey());
+        $this->assertNotEmpty((new BYUJWT)->getPublicKeys());
     }
+
+    /**
+     * NOTE: Need to generate live tokens for the following two tests, so commenting out by default
+     */
+
+//    public function testTyk()
+//    {
+//        $foo = new BYUJWT(['wellKnownUrl' => 'https://api-sandbox.byu.edu/.well-known/openid-configuration']);
+//        $decoded = $foo->decode("eyJraWQiOiJwdWJsaWM6YXBpLXNhbmRib3gtMSIsIng1dCI6IllsUmhnYzhNaW9tenNsRWlSOThPZmpDTFFQMCIsImFsZyI6IlJTMjU2In0.eyJpc3MiOiJodHRwczovL2FwaS5ieXUuZWR1IiwiZXhwIjoxNjU0MTEwNTExLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3N1YnNjcmliZXIiOiJCWVUvYnRtMjk2IiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9hcHBsaWNhdGlvbmlkIjoieXliYmpacUt0M0pvaHgzVU1lZUFhVTlNZnFRYSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25uYW1lIjoieXliYmpacUt0M0pvaHgzVU1lZUFhVTlNZnFRYSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb250aWVyIjoiVW5saW1pdGVkIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9hcGljb250ZXh0IjoiL2VjaG9jdXN0YXV0aC92MiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdmVyc2lvbiI6InYyIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy90aWVyIjoiVW5saW1pdGVkIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9rZXl0eXBlIjoiU0FOREJPWCIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdXNlcnR5cGUiOiJBUFBMSUNBVElPTl9VU0VSIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9lbmR1c2VyIjoic214MDAwMDFAY2FyYm9uLnN1cGVyIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9lbmR1c2VyVGVuYW50SWQiOiItMTIzNCIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvY2xpZW50X2lkIjoieXliYmpacUt0M0pvaHgzVU1lZUFhVTlNZnFRYSIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfc3Vic2NyaWJlcl9uZXRfaWQiOiJidG0yOTYiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3BlcnNvbl9pZCI6IjcyMDIyMzE3MiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfYnl1X2lkIjoiNzU4Mzc2MTYwIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9uZXRfaWQiOiJidG0yOTYiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3N1cm5hbWUiOiJNb3JnYW4iLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3N1cm5hbWVfcG9zaXRpb24iOiJMIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9yZXN0X29mX25hbWUiOiJCbGFrZSBUYW5uZXIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3ByZWZlcnJlZF9maXJzdF9uYW1lIjoiQmxha2UiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3NvcnRfbmFtZSI6Ik1vcmdhbiwgQmxha2UgVGFubmVyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9uYW1lX3ByZWZpeCI6IiAiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25hbWVfc3VmZml4IjoiICIsImh0dHA6Ly90eWsuaW8vY2xhaW1zL3VzZXJ0eXBlIjoiQVBQTElDQVRJT05fVVNFUiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3BlcnNvbl9pZCI6Ijk2ODIxOTU4MiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX2J5dV9pZCI6IjMxMzE1MTA5MSIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX25ldF9pZCI6InNteDAwMDAxIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc3VybmFtZSI6IlNteDAwMDAxIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc3VybmFtZV9wb3NpdGlvbiI6IkwiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9yZXN0X29mX25hbWUiOiJTaXRlbWluZGVyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfcHJlZmVycmVkX2ZpcnN0X25hbWUiOiJTaXRlbWluZGVyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc29ydF9uYW1lIjoiU214MDAwMDEsIFNpdGVtaW5kZXIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9wcmVmaXgiOiIgIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfY2xhaW1fc291cmNlIjoiQ0xJRU5UX1NVQlNDUklCRVIifQ.t_SSRMI5ld9KRvLBmIwN10ldGE5cRWrc1ke28Avlv3dVv_TuasqKzbsuRdNL-YXZCFdmDBaD8AFYFizq9dlvfXkdCkxobvkJ8SV5RWeVXooEnynPW8d8pV9e1C47eKCGdcjzJY8leA0rI890aEpwddu-iL-sHLOs6S-8yYl7aL_5lgcRZ57tsNdbaN9WXGGv4KP3CcJVdbj29l2CdawfD1vXQ4alMThAat3Q1or0dxN_JqgXLCIgOaQs6b5ZObNcOMeovEHuCVb7fpCFImq75EIU4RKZXU-Ehjg4TulSeZYLHUBv2D_deXH0gxN0T8DQcMLLbh5i6A7JTCIdSHOdqBeHVpZ47PIoO1PyMpk0jqgQisjdBqvqlbozVtzVsKpbBO4F1bW6y2kBf5cPCROzjs1Ku8SJU74qHDR-tO5zr8AKrekUCbx8rp7ACTshTExejf2-ET7h8nJtAex9FcQi3YbyfpaT085ziqOQzr5WibxYYMds6uVnYls9UbEV-UXHE38d6ZWjWTE-Smaq7p2RdHKi2DRSa8btr5Ckw4M3N7cFWEFEqy_OsMSgl99dKhu2UKuWNgqvWLfLcWe0dEnYHFyBNUDYUItVEyT64xAHc6Zw15hBCWNLs_14HLi8GxSeJIMNKCC-nA8x2J7prQcRrNdIGqsBz2-4bGfj-M1clS4");
+//        $this->assertNotEmpty($decoded);
+//    }
+//
+//    public function testLive()
+//    {
+//        $foo = new BYUJWT();
+//        $decoded = $foo->decode("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IlkySTVNemd4WWpZNVlUUXdNVGxqWkRVek4yWTJaamxqTURVNFpXWmpaVE14WmpWbU9USmxNZyJ9.eyJpc3MiOiJodHRwczovL2FwaS5ieXUuZWR1IiwiZXhwIjoxNjU0MTEwNzE2LCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3N1YnNjcmliZXIiOiJCWVUvZ2RzMiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25pZCI6IjY0MSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25uYW1lIjoiRGVmYXVsdEFwcGxpY2F0aW9uIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9hcHBsaWNhdGlvbnRpZXIiOiJVbmxpbWl0ZWQiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2FwaWNvbnRleHQiOiIvZWNoby92MSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdmVyc2lvbiI6InYxIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy90aWVyIjoiU2lsdmVyIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9rZXl0eXBlIjoiUFJPRFVDVElPTiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdXNlcnR5cGUiOiJBUFBMSUNBVElPTl9VU0VSIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9lbmR1c2VyIjoiZ2RzMkBjYXJib24uc3VwZXIiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2VuZHVzZXJUZW5hbnRJZCI6Ii0xMjM0IiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfcmVzdF9vZl9uYW1lIjoiR2xlbiBEYXZpZCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3BlcnNvbl9pZCI6IjQyMDIwNjk0MiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX2J5dV9pZCI6IjYxNzg5NDA4NiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvY2xpZW50X2lkIjoiNFpmODRhUk5JdUYzVTBKaTBydDhHdzR1ZnNBYSIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX25ldF9pZCI6ImdkczIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zdXJuYW1lIjoiU2F3eWVyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9wZXJzb25faWQiOiI0MjAyMDY5NDIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3NvcnRfbmFtZSI6IlNhd3llciwgR2xlbiBEYXZpZCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfY2xhaW1fc291cmNlIjoiQ0xJRU5UX1NVQlNDUklCRVIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25ldF9pZCI6ImdkczIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3N1YnNjcmliZXJfbmV0X2lkIjoiZ2RzMiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3ByZWZpeCI6IiAiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zdXJuYW1lX3Bvc2l0aW9uIjoiTCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3Jlc3Rfb2ZfbmFtZSI6IkdsZW4gRGF2aWQiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25hbWVfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfc3VybmFtZSI6IlNhd3llciIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfbmFtZV9wcmVmaXgiOiIgIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9zdXJuYW1lX3Bvc2l0aW9uIjoiTCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3ByZWZlcnJlZF9maXJzdF9uYW1lIjoiR2xlbiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfYnl1X2lkIjoiNjE3ODk0MDg2IiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9wcmVmZXJyZWRfZmlyc3RfbmFtZSI6IkdsZW4iLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zb3J0X25hbWUiOiJTYXd5ZXIsIEdsZW4gRGF2aWQifQ.uqT2Vra-mfNYr5Xa6e3kyHwzxYjWwhXmoJ2roqWX6b0eb1SlTcjSMyWvAERwSYX1QgVS5UiI1mvc8RpRGcaNDJZLX97xs3HpRFeaL8yWRAsrqPAkwYpVcPRdE8eFmb-2rBo0ETQiXMasMUuL4e88eOilJeexh8rAdJoqb316AVEMsD5JYGhsrBboX8reHTRt7MxYr51hQ4LU1NP-mBZAOQ4F9WXbGT67b13ZiNihSklycZ_o_1vD4Na0uOMZ6NrhyhUfXCbEow2CyJdvHC7EbI_6BDvZZxl6j4lRgkyADge4CiuvP05FZTEaQoqCPenrynuKrzIDA2Ww6hXxkOQXcQ");
+//        $this->assertNotEmpty($decoded);
+//    }
 }

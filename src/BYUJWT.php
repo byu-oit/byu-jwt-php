@@ -18,6 +18,7 @@ namespace BYU\JWT;
 
 use Exception;
 use Firebase\JWT\JWT;
+use Firebase\JWT\JWK;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use phpseclib\File\X509;
@@ -82,6 +83,43 @@ class BYUJWT
         $this->setCache('wellKnown', $output);
 
         return $output;
+    }
+
+    /**
+     * Get all public keys from the current well-known URL
+     *
+     * @return string[]
+     */
+    public function getPublicKeys()
+    {
+        $cached = $this->getCache('publicKeys');
+        if (!empty($cached)) {
+            return $cached;
+        }
+
+        $keys = [];
+
+        $wellKnown = $this->getWellKnown();
+        if (empty($wellKnown->jwks_uri)) {
+            return $keys;
+        }
+
+        try {
+            $response = $this->client->get($wellKnown->jwks_uri);
+        } catch (RequestException $e) {
+            $this->lastException = $e;
+            return $keys;
+        }
+
+        $jwks = json_decode($response->getBody(), true);
+        try {
+            $keys = JWK::parseKeySet($jwks);
+            $this->setCache('publicKeys', $keys);
+        } catch (\Exception $e) {
+            // Intentional ignore
+        }
+
+        return $keys;
     }
 
     /**
@@ -159,13 +197,26 @@ class BYUJWT
     public function decode($jwt)
     {
         $wellKnown = $this->getWellKnown();
-        $key = $this->getPublicKey();
-        $decodedObject = JWT::decode(
-            $jwt,
-            $key,
-            $wellKnown->id_token_signing_alg_values_supported
-        );
+        $keys = $this->getPublicKeys();
+        foreach ($keys as $key) {
+            try {
+                $decodedObject = JWT::decode(
+                    $jwt,
+                    $key,
+                    $wellKnown->id_token_signing_alg_values_supported
+                );
+                break; // Successful decode, so exit loop
+            } catch (\Exception $decodeError) {
 
+            }
+        }
+
+        if (empty($decodedObject)) {
+            if (!empty($decodeError)) {
+                throw $decodeError;
+            }
+            throw new Exception('Could not decode JWT');
+        }
         //Firebase\JWT\JWT::decode does not verify that some required
         //fields actually exist
         if (empty($decodedObject->iss)) {
