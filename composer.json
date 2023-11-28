@@ -5,7 +5,7 @@
     "require": {
         "firebase/php-jwt": "~5.5",
         "guzzlehttp/guzzle": "~5.3",
-        "phpseclib/phpseclib": "~2.0.4"
+        "phpseclib/phpseclib": "~3.0.34"
     },
     "require-dev": {
         "php-vcr/phpunit-testlistener-vcr": "~2.0",
