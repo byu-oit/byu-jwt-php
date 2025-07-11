@@ -1,0 +1,45 @@
+
+-
+    request:
+        method: GET
+        url: 'https://api-dev.byu.edu/.well-known/openid-configuration'
+        headers:
+            Host: api-dev.byu.edu
+            Accept-Encoding: null
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Fri, 11 Jul 2025 22:21:33 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Thu, 10 Jul 2025 17:08:36 GMT'
+            ETag: '"2de6a5e2078e236bcb625cb201711e90:dtagent103172506300958422zGD"'
+            Accept-Ranges: bytes
+            Content-Type: application/json
+            Content-Length: '664'
+        body: "{\n    \"issuer\": \"https://api-dev.byu.edu\",\n    \"authorization_endpoint\": \"https://api-dev.byu.edu/authorize\",\n    \"token_endpoint\": \"https://api-dev.byu.edu/token\",\n    \"userinfo_endpoint\": \"https://api-dev.byu.edu/userinfo\",\n    \"revocation_endpoint\": \"https://api-dev.byu.edu/revoke\",\n    \"end_session_endpoint\": \"https://api-dev.byu.edu/logout\",\n    \"jwks_uri\": \"https://api-dev.byu.edu/.well-known/byucerts\",\n    \"response_types_supported\": [\n        \"code\",\n        \"token\"\n    ],\n    \"subject_types_supported\": [\n        \"public\"\n    ],\n    \"id_token_signing_alg_values_supported\": [\n        \"RS256\"\n    ],\n    \"scopes_supported\": [\n        \"openid\"\n    ]\n}\n"
+-
+    request:
+        method: GET
+        url: 'https://api-dev.byu.edu/.well-known/byucerts'
+        headers:
+            Host: api-dev.byu.edu
+            Accept-Encoding: null
+            Accept: null
+    response:
+        status:
+            http_version: '1.1'
+            code: '200'
+            message: OK
+        headers:
+            Date: 'Fri, 11 Jul 2025 22:21:33 GMT'
+            Server: 'Apache/2.2.15 (Red Hat)'
+            Last-Modified: 'Thu, 10 Jul 2025 17:08:36 GMT'
+            ETag: '"a2644da367c793326de01d86e122cb54:dtagent103172506300958422zGD"'
+            Accept-Ranges: bytes
+            Content-Length: '410'
+            Content-Type: application/json
+        body: "{\"keys\":[{\"kty\":\"RSA\",\"e\":\"AQAB\",\"kid\":\"yay\",\"alg\":\"RS256\",\"n\":\"sjl4oTFcLmhbYM499JQjCGGJTmwClAGwezHddYGV5grrVR8M04kXunlzAicPD9FDOltAYQng1YkO5D-HDU4iVvlMa7l_b0oZfpnHMcSbuLwSlQD9idKpI_wsI1T9B3MgoqSPk7jc6lmrlfIkKKLqUwg6IMgC8o9Q3_B7kf_32vuwNn7s5iE8nB7A550A43XS1hYHWIVsO9H4nZ94f29yvCINkLrndxOTTPPeyDF3wL16PU9rL9brT8xKH4dxqcjMhNzT2nZc7I6uAcN1VH4sfWGcGbehXgOtr-nc_oibT3suUPPtM_Dfu38jgrb6nHS9T-jeMdj3hbDPB81NEHcTuQ\"}]}"

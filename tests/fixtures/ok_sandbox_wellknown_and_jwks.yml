@@ -2,9 +2,9 @@
 -
     request:
         method: GET
-        url: 'https://api.byu.edu/.well-known/openid-configuration'
+        url: 'https://api-sandbox.byu.edu/.well-known/openid-configuration'
         headers:
-            Host: api.byu.edu
+            Host: api-sandbox.byu.edu
             Accept-Encoding: null
             Accept: null
     response:
@@ -18,15 +18,15 @@
             Last-Modified: 'Tue, 12 Jan 2016 17:36:02 GMT'
             ETag: '"41b31-1fb-529267cbfe480"'
             Accept-Ranges: bytes
-            Content-Length: '476'
+            Content-Length: '516'
             Content-Type: 'text/html; charset=UTF-8'
-        body: "{\"issuer\":\"https://api.byu.edu\",\"authorization_endpoint\":\"https://api.byu.edu/authorize\",\"token_endpoint\":\"https://api.byu.edu/token\",\"userinfo_endpoint\":\"https://wso2-is.byu.edu/oauth2/userinfo?schema=openid\",\"revocation_endpoint\":\"https://api.byu.edu/revoke\",\"jwks_uri\":\"https://api.byu.edu/.well-known/byucerts\",\"response_types_supported\":[\"code\",\"token\"],\"subject_types_supported\":[\"public\"],\"id_token_signing_alg_values_supported\":[\"RS256\"],\"scopes_supported\":[\"openid\"]}"
+        body: "{\"issuer\":\"https://api-sandbox.byu.edu\",\"authorization_endpoint\":\"https://api-sandbox.byu.edu/authorize\",\"token_endpoint\":\"https://api-sandbox.byu.edu/token\",\"userinfo_endpoint\":\"https://wso2-is.byu.edu/oauth2/userinfo?schema=openid\",\"revocation_endpoint\":\"https://api-sandbox.byu.edu/revoke\",\"jwks_uri\":\"https://api-sandbox.byu.edu/.well-known/byucerts\",\"response_types_supported\":[\"code\",\"token\"],\"subject_types_supported\":[\"public\"],\"id_token_signing_alg_values_supported\":[\"RS256\"],\"scopes_supported\":[\"openid\"]}"
 -
     request:
         method: GET
-        url: 'https://api.byu.edu/.well-known/byucerts'
+        url: 'https://api-sandbox.byu.edu/.well-known/byucerts'
         headers:
-            Host: api.byu.edu
+            Host: api-sandbox.byu.edu
             Accept-Encoding: null
             Accept: null
     response:

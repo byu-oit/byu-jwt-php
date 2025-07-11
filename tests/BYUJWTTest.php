@@ -63,6 +63,36 @@ final class BYUJWTTest extends TestCase
     }
 
     /**
+     * @vcr ok_sandbox_wellknown_and_jwks.yml
+     */
+    public function testSandboxJwtDecode()
+    {
+        $jwt = JWT::encode(
+            ['iss' => 'https://api-sandbox.byu.edu', 'exp' => time() + 10, 'data' => 'test'],
+            static::$privateKey, 'RS256'
+        );
+        $decodedJwt = $this->BYUJWT->decode($jwt);
+        $this->assertNotEmpty($decodedJwt);
+        $this->assertEquals('https://api-sandbox.byu.edu', $decodedJwt['iss']);
+        $this->assertEquals('test', $decodedJwt['data']);
+    }
+
+    /**
+     * @vcr ok_dev_wellknown_and_jwks.yml
+     */
+    public function testDevJwtDecode()
+    {
+        $jwt = JWT::encode(
+            ['iss' => 'https://api-dev.byu.edu', 'exp' => time() + 10, 'data' => 'test'],
+            static::$privateKey, 'RS256'
+        );
+        $decodedJwt = $this->BYUJWT->decode($jwt);
+        $this->assertNotEmpty($decodedJwt);
+        $this->assertEquals('https://api-dev.byu.edu', $decodedJwt['iss']);
+        $this->assertEquals('test', $decodedJwt['data']);
+    }
+
+    /**
      * @vcr ok_wellknown_and_jwks.yml
      */
     public function testJwtValidate()
@@ -349,6 +379,16 @@ final class BYUJWTTest extends TestCase
     {
         //one "live" test to https://api.byu.edu
         $this->assertNotEmpty((new BYUJWT)->getPublicKeys());
+    }
+
+    public function testJWTIssuer()
+    {
+        $issuer = $this->BYUJWT->getIssuer("x.y.z");
+        $this->assertEmpty($issuer);
+
+        $payload = base64_encode(json_encode(['iss' => 'Bob']));
+        $issuer = $this->BYUJWT->getIssuer("x.${payload}.z");
+        $this->assertEquals('Bob', $issuer);
     }
 
     /**

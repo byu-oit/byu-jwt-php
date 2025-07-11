@@ -61,15 +61,28 @@ class BYUJWT
      *
      * @return object Parsed JSON response from the well known URL
      */
-    public function getWellKnown()
+    public function getWellKnown($issuer = "")
     {
-        $cached = $this->getCache('wellKnown');
+        $cacheKey = 'wellKnown' . $issuer;
+        $cached = $this->getCache($cacheKey);
         if (!empty($cached)) {
             return $cached;
         }
 
+        $url = $this->wellKnownUrl;
+        switch ($issuer) {
+            case "https://api.byu.edu":
+                $url = "https://api.byu.edu/.well-known/openid-configuration";
+                break;
+            case "https://api-sandbox.byu.edu":
+                $url = "https://api-sandbox.byu.edu/.well-known/openid-configuration";
+                break;
+            case "https://api-dev.byu.edu":
+                $url = "https://api-dev.byu.edu/.well-known/openid-configuration";
+                break;
+        }
         try {
-            $response = $this->client->get($this->wellKnownUrl);
+            $response = $this->client->get($url);
         } catch (RequestException $e) {
             $this->lastException = $e;
             return null;
@@ -80,7 +93,7 @@ class BYUJWT
             return null;
         }
 
-        $this->setCache('wellKnown', $output);
+        $this->setCache($cacheKey, $output);
 
         return $output;
     }
@@ -90,16 +103,17 @@ class BYUJWT
      *
      * @return string[]
      */
-    public function getPublicKeys()
+    public function getPublicKeys($issuer = "")
     {
-        $cached = $this->getCache('publicKeys');
+        $cacheKey = 'publicKeys' . $issuer;
+        $cached = $this->getCache($cacheKey);
         if (!empty($cached)) {
             return $cached;
         }
 
         $keys = [];
 
-        $wellKnown = $this->getWellKnown();
+        $wellKnown = $this->getWellKnown($issuer);
         if (empty($wellKnown->jwks_uri)) {
             return $keys;
         }
@@ -112,9 +126,12 @@ class BYUJWT
         }
 
         $jwks = json_decode($response->getBody(), true);
+        if (!is_array($jwks)) {
+            return $keys;
+        }
         try {
             $keys = JWK::parseKeySet($jwks);
-            $this->setCache('publicKeys', $keys);
+            $this->setCache($cacheKey, $keys);
         } catch (\Exception $e) {
             // Intentional ignore
         }
@@ -127,14 +144,15 @@ class BYUJWT
      *
      * @return string
      */
-    public function getPublicKey()
+    public function getPublicKey($issuer = "")
     {
-        $cached = $this->getCache('publicKey');
+        $cacheKey = 'publicKey' . $issuer;
+        $cached = $this->getCache($cacheKey);
         if (!empty($cached)) {
             return $cached;
         }
 
-        $wellKnown = $this->getWellKnown();
+        $wellKnown = $this->getWellKnown($issuer);
         if (empty($wellKnown->jwks_uri)) {
             return null;
         }
@@ -158,7 +176,7 @@ class BYUJWT
 
         $key = (string)$X509->getPublicKey();
 
-        $this->setCache('publicKey', $key);
+        $this->setCache($cacheKey, $key);
 
         return $key;
     }
@@ -184,20 +202,41 @@ class BYUJWT
         }
     }
 
+    public function getIssuer($jwt)
+    {
+        $tks = \explode('.', $jwt);
+        if (\count($tks) != 3) {
+            return "";
+        }
+        $bodyb64 = $tks[1];
+        try {
+            $payload = JWT::jsonDecode(JWT::urlsafeB64Decode($bodyb64));
+        } catch (\Exception $e) {
+            // Intentionally ignoring. We don't care *why* the payload decode failed here, since this is just a simple check to see if the jwt has an "iss" field set
+            return "";
+        }
+        if (empty($payload->iss) || !is_string($payload->iss)) {
+            return "";
+        }
+
+        return $payload->iss;
+    }
+
     /**
      * Decode a JWT
      *
      * @param string $jwt JWT
      *
-     * @return object decoded JWT
+     * @return array decoded JWT
      *
      * @throws Exception Various exceptions for various problems with JWT
      *         (see Firebase\JWT\JWT::decode for details)
      */
     public function decode($jwt)
     {
-        $wellKnown = $this->getWellKnown();
-        $keys = $this->getPublicKeys();
+        $issuer = $this->getIssuer($jwt);
+        $wellKnown = $this->getWellKnown($issuer);
+        $keys = $this->getPublicKeys($issuer);
         foreach ($keys as $key) {
             try {
                 $decodedObject = JWT::decode(
