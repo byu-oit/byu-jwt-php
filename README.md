@@ -121,3 +121,4 @@ The output is an array with the original JWT data, plus the standard BYU claims 
 ```
 
 Note that ```php $decoded['byu']['webresCheck'] ``` contains the identifiers for the 'resourceOwner' (i.e. the end user) if present, or the 'client' (i.e. the application owner) if not.
+
