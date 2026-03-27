@@ -17,7 +17,6 @@
 namespace BYU\JWT\Test;
 
 use BYU\JWT\BYUJWT;
-use Firebase\JWT\JWT;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -33,14 +32,38 @@ final class BYUJWTTest extends TestCase
 {
 
     protected static $privateKey;
+    protected $BYUJWT;
 
-    public static function setUpBeforeClass()
+    public static function setUpBeforeClass(): void
     {
         $keyData = file_get_contents(dirname(__FILE__) . '/testing.key');
         static::$privateKey = openssl_pkey_get_private($keyData);
     }
 
-    public function setUp()
+    protected function encodeJwt($payload, $algorithm = 'RS256')
+    {
+        $header = ['typ' => 'JWT', 'alg' => $algorithm];
+        $headerSegment = $this->base64UrlEncode(json_encode($header));
+        $payloadSegment = $this->base64UrlEncode(json_encode($payload));
+        $signingInput = $headerSegment . '.' . $payloadSegment;
+
+        if ($algorithm === 'RS256') {
+            openssl_sign($signingInput, $signature, static::$privateKey, OPENSSL_ALGO_SHA256);
+        } elseif ($algorithm === 'HS256') {
+            $signature = hash_hmac('sha256', $signingInput, 'dummy key', true);
+        } else {
+            throw new \InvalidArgumentException('Unsupported test algorithm');
+        }
+
+        return $signingInput . '.' . $this->base64UrlEncode($signature);
+    }
+
+    protected function base64UrlEncode($value)
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    protected function setUp(): void
     {
         $this->BYUJWT = new BYUJWT();
 
@@ -52,9 +75,9 @@ final class BYUJWTTest extends TestCase
      */
     public function testJwtDecode()
     {
-        $jwt = JWT::encode(
+        $jwt = $this->encodeJwt(
             ['iss' => 'https://api.byu.edu', 'exp' => time() + 10, 'data' => 'test'],
-            static::$privateKey, 'RS256'
+            'RS256'
         );
         $decodedJwt = $this->BYUJWT->decode($jwt);
         $this->assertNotEmpty($decodedJwt);
@@ -67,9 +90,9 @@ final class BYUJWTTest extends TestCase
      */
     public function testSandboxJwtDecode()
     {
-        $jwt = JWT::encode(
+        $jwt = $this->encodeJwt(
             ['iss' => 'https://api-sandbox.byu.edu', 'exp' => time() + 10, 'data' => 'test'],
-            static::$privateKey, 'RS256'
+            'RS256'
         );
         $decodedJwt = $this->BYUJWT->decode($jwt);
         $this->assertNotEmpty($decodedJwt);
@@ -82,9 +105,9 @@ final class BYUJWTTest extends TestCase
      */
     public function testDevJwtDecode()
     {
-        $jwt = JWT::encode(
+        $jwt = $this->encodeJwt(
             ['iss' => 'https://api-dev.byu.edu', 'exp' => time() + 10, 'data' => 'test'],
-            static::$privateKey, 'RS256'
+            'RS256'
         );
         $decodedJwt = $this->BYUJWT->decode($jwt);
         $this->assertNotEmpty($decodedJwt);
@@ -97,9 +120,9 @@ final class BYUJWTTest extends TestCase
      */
     public function testJwtValidate()
     {
-        $jwt = JWT::encode(
+        $jwt = $this->encodeJwt(
             ['iss' => 'https://api.byu.edu', 'exp' => time() + 10],
-            static::$privateKey, 'RS256'
+            'RS256'
         );
         $this->assertSame(true, $this->BYUJWT->validateJWT($jwt));
     }
@@ -159,10 +182,7 @@ final class BYUJWTTest extends TestCase
         $BYUJWT = new BYUJWT(['wellKnownUrl' => 'badprotocol://fakeurl']);
 
         $this->assertEmpty($BYUJWT->getWellKnown());
-        $this->assertInstanceOf(
-            'GuzzleHttp\Exception\RequestException',
-            $BYUJWT->lastException
-        );
+        $this->assertInstanceOf(\Throwable::class, $BYUJWT->lastException);
     }
 
     /**
@@ -212,14 +232,14 @@ final class BYUJWTTest extends TestCase
      */
     public function testExpiredJWT()
     {
-        $jwt = JWT::encode(
+        $jwt = $this->encodeJwt(
             ['iss' => 'https://api.byu.edu', 'exp' => 1],
-            static::$privateKey, 'RS256'
+            'RS256'
         );
 
         $this->assertSame(false, $this->BYUJWT->validateJWT($jwt));
         $this->assertInstanceOf(
-            'Firebase\JWT\ExpiredException',
+            'BYU\JWT\ExpiredException',
             $this->BYUJWT->lastException
         );
     }
@@ -230,7 +250,7 @@ final class BYUJWTTest extends TestCase
     public function testUnallowedAlgorithm()
     {
         //JWT::encode default algorithm is "HS256"
-        $badJwt = JWT::encode(['data' => 'testdata'], 'dummy key');
+        $badJwt = $this->encodeJwt(['data' => 'testdata'], 'HS256');
         $this->assertSame(false, $this->BYUJWT->validateJWT($badJwt));
         $this->assertEquals(
             'Algorithm not allowed',
@@ -243,7 +263,7 @@ final class BYUJWTTest extends TestCase
      */
     public function testJwtWithNoIssuer()
     {
-        $badJwt = JWT::encode(['dummy' => 'data'], static::$privateKey, 'RS256');
+        $badJwt = $this->encodeJwt(['dummy' => 'data'], 'RS256');
         $this->assertSame(false, $this->BYUJWT->validateJWT($badJwt));
         $this->assertInstanceOf(
             'BYU\JWT\NoIssuerException',
@@ -256,9 +276,8 @@ final class BYUJWTTest extends TestCase
      */
     public function testJwtWithWrongIssuer()
     {
-        $badJwt = JWT::encode(
+        $badJwt = $this->encodeJwt(
             ['iss' => 'bad', 'dummy' => 'data'],
-            static::$privateKey,
             'RS256'
         );
         $this->assertSame(false, $this->BYUJWT->validateJWT($badJwt));
@@ -273,9 +292,8 @@ final class BYUJWTTest extends TestCase
      */
     public function testJwtWithNoExpiration()
     {
-        $badJwt = JWT::encode(
+        $badJwt = $this->encodeJwt(
             ['iss' => 'https://api.byu.edu', 'dummy' => 'data'],
-            static::$privateKey,
             'RS256'
         );
         $this->assertSame(false, $this->BYUJWT->validateJWT($badJwt));
@@ -330,7 +348,7 @@ final class BYUJWTTest extends TestCase
         }';
         $data = json_decode($json);
 
-        $jwt = JWT::encode($data, static::$privateKey, 'RS256');
+        $jwt = $this->encodeJwt($data, 'RS256');
         $decodedJwt = $this->BYUJWT->decode($jwt);
 
         $this->assertEquals("617894086", $decodedJwt['byu']['client']['byuId']);
@@ -377,6 +395,10 @@ final class BYUJWTTest extends TestCase
      */
     public function testRealWellKnown()
     {
+        if (getenv('BYUJWT_RUN_LIVE_TESTS') !== '1') {
+            $this->markTestSkipped('Set BYUJWT_RUN_LIVE_TESTS=1 to run live network tests.');
+        }
+
         //one "live" test to https://api.byu.edu
         $this->assertNotEmpty((new BYUJWT)->getPublicKeys());
     }
@@ -386,8 +408,8 @@ final class BYUJWTTest extends TestCase
         $issuer = $this->BYUJWT->getIssuer("x.y.z");
         $this->assertEmpty($issuer);
 
-        $payload = base64_encode(json_encode(['iss' => 'Bob']));
-        $issuer = $this->BYUJWT->getIssuer("x.${payload}.z");
+        $payload = rtrim(strtr(base64_encode(json_encode(['iss' => 'Bob'])), '+/', '-_'), '=');
+        $issuer = $this->BYUJWT->getIssuer("x.{$payload}.z");
         $this->assertEquals('Bob', $issuer);
     }
 
