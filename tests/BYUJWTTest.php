@@ -158,6 +158,24 @@ final class BYUJWTTest extends TestCase
     }
 
     /**
+     * @vcr missing_keys_in_jwks.yml
+     */
+    public function testMissingKeysInWellKnownJWKS()
+    {
+        $this->assertNotEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
+    }
+
+    /**
+     * @vcr key_malformed_in_jwks.yml
+     */
+    public function testKeyMalformedInWellKnownJWKS()
+    {
+        $this->assertNotEmpty($this->BYUJWT->getWellKnown());
+        $this->assertEmpty($this->BYUJWT->getPublicKeys());
+    }
+
+    /**
      * @vcr bad_wellknown.yml
      */
     public function testBadWellKnown()
@@ -234,7 +252,6 @@ final class BYUJWTTest extends TestCase
      */
     public function testUnallowedAlgorithm()
     {
-        //JWT::encode default algorithm is "HS256"
         $badJwt = $this->encodeJwt(['data' => 'testdata'], 'HS256');
         $this->assertSame(false, $this->BYUJWT->validateJWT($badJwt));
         $this->assertEquals(
@@ -390,12 +407,62 @@ final class BYUJWTTest extends TestCase
 
     public function testJWTIssuer()
     {
-        $issuer = $this->BYUJWT->getIssuer("x.y.z");
-        $this->assertEmpty($issuer);
-
         $payload = rtrim(strtr(base64_encode(json_encode(['iss' => 'Bob'])), '+/', '-_'), '=');
         $issuer = $this->BYUJWT->getIssuer("x.{$payload}.z");
         $this->assertEquals('Bob', $issuer);
+
+        $issuer = $this->BYUJWT->getIssuer("");
+        $this->assertEmpty($issuer);
+
+        $issuer = $this->BYUJWT->getIssuer("x.y.z");
+        $this->assertEmpty($issuer);
+
+        $payload = rtrim(strtr(base64_encode("this is invalid json!"), '+/', '-_'), '=');
+        $issuer = $this->BYUJWT->getIssuer("x.{$payload}.z");
+        $this->assertEmpty($issuer);
+    }
+
+    /**
+     * @vcr jwks_unspecified_algorithms.yml
+     */
+    public function testVariousDecodeFailures()
+    {
+        $base64Failure = "x.y.z";
+        $this->assertFalse($this->BYUJWT->validateJWT($base64Failure));
+        $this->assertEquals('Could not decode JWT', $this->BYUJWT->lastException->getMessage());
+
+        $notJson = $this->base64UrlEncode("not json");
+        $notJsonJwt = "{$notJson}.{$notJson}.{$notJson}";
+        $this->assertFalse($this->BYUJWT->validateJWT($notJsonJwt));
+        $this->assertEquals('Could not decode JWT', $this->BYUJWT->lastException->getMessage());
+
+        $jwt = $this->encodeJwt(['iss' => 'https://api.byu.edu', 'exp' => time() + 10, 'data' => 'test']);
+        $parts = \explode(".", $jwt);
+        $parts[2] = $this->base64UrlEncode("bad signature");
+        $this->assertFalse($this->BYUJWT->validateJWT(implode(".", $parts)));
+        $this->assertEquals('Could not decode JWT', $this->BYUJWT->lastException->getMessage());
+
+        $headerSegment = $this->base64UrlEncode(json_encode(['typ' => 'JWT', 'alg' => 'BAD ALGORITHM']));
+        $payloadSegment = $this->base64UrlEncode(json_encode(['iss' => 'https://api.byu.edu', 'exp' => time() + 10, 'data' => 'test']));
+        $signatureSegment = $this->base64UrlEncode('Not a valid algorithm anyhow.');
+        $jwt = "{$headerSegment}.{$payloadSegment}.{$signatureSegment}";
+        $this->assertFalse($this->BYUJWT->validateJWT($jwt));
+        $this->assertEquals('Algorithm not allowed', $this->BYUJWT->lastException->getMessage());
+    }
+
+    public function testRandomInternals() {
+        // Bugs me there are TWO individual lines of code left to reach 100% coverage ;)
+        // So here are two extremely low-level hacks to get to that unnecessary goal.
+        $byuJwtClass = new \ReflectionClass($this->BYUJWT);
+        $asn1Method = $byuJwtClass->getMethod("asn1EncodeInteger");
+        $asn1Method->setAccessible(true);
+        $encodedInt = $asn1Method->invokeArgs($this->BYUJWT, ['']);
+        $this->assertEquals("\x02\x01\x00", $encodedInt);
+
+        $createKeyMethod = $byuJwtClass->getMethod("createPublicKeyFromCertificate");
+        $createKeyMethod->setAccessible(true);
+        $result = $createKeyMethod->invokeArgs($this->BYUJWT, ['DEEP MOJO TEST']);
+        $this->assertNull($result);
     }
 
     /**
@@ -415,4 +482,29 @@ final class BYUJWTTest extends TestCase
 //        $decoded = $foo->decode("eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IlkySTVNemd4WWpZNVlUUXdNVGxqWkRVek4yWTJaamxqTURVNFpXWmpaVE14WmpWbU9USmxNZyJ9.eyJpc3MiOiJodHRwczovL2FwaS5ieXUuZWR1IiwiZXhwIjoxNjU0MTEwNzE2LCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL3N1YnNjcmliZXIiOiJCWVUvZ2RzMiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25pZCI6IjY0MSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvYXBwbGljYXRpb25uYW1lIjoiRGVmYXVsdEFwcGxpY2F0aW9uIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9hcHBsaWNhdGlvbnRpZXIiOiJVbmxpbWl0ZWQiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2FwaWNvbnRleHQiOiIvZWNoby92MSIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdmVyc2lvbiI6InYxIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy90aWVyIjoiU2lsdmVyIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9rZXl0eXBlIjoiUFJPRFVDVElPTiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvdXNlcnR5cGUiOiJBUFBMSUNBVElPTl9VU0VSIiwiaHR0cDovL3dzbzIub3JnL2NsYWltcy9lbmR1c2VyIjoiZ2RzMkBjYXJib24uc3VwZXIiLCJodHRwOi8vd3NvMi5vcmcvY2xhaW1zL2VuZHVzZXJUZW5hbnRJZCI6Ii0xMjM0IiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL3Jlc291cmNlb3duZXJfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfcmVzdF9vZl9uYW1lIjoiR2xlbiBEYXZpZCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3BlcnNvbl9pZCI6IjQyMDIwNjk0MiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX2J5dV9pZCI6IjYxNzg5NDA4NiIsImh0dHA6Ly93c28yLm9yZy9jbGFpbXMvY2xpZW50X2lkIjoiNFpmODRhUk5JdUYzVTBKaTBydDhHdzR1ZnNBYSIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX25ldF9pZCI6ImdkczIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zdXJuYW1lIjoiU2F3eWVyIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9wZXJzb25faWQiOiI0MjAyMDY5NDIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3NvcnRfbmFtZSI6IlNhd3llciwgR2xlbiBEYXZpZCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfY2xhaW1fc291cmNlIjoiQ0xJRU5UX1NVQlNDUklCRVIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25ldF9pZCI6ImdkczIiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X3N1YnNjcmliZXJfbmV0X2lkIjoiZ2RzMiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3ByZWZpeCI6IiAiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zdXJuYW1lX3Bvc2l0aW9uIjoiTCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3Jlc3Rfb2ZfbmFtZSI6IkdsZW4gRGF2aWQiLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvY2xpZW50X25hbWVfc3VmZml4IjoiICIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfc3VybmFtZSI6IlNhd3llciIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfbmFtZV9wcmVmaXgiOiIgIiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9zdXJuYW1lX3Bvc2l0aW9uIjoiTCIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9yZXNvdXJjZW93bmVyX3ByZWZlcnJlZF9maXJzdF9uYW1lIjoiR2xlbiIsImh0dHA6Ly9ieXUuZWR1L2NsYWltcy9jbGllbnRfYnl1X2lkIjoiNjE3ODk0MDg2IiwiaHR0cDovL2J5dS5lZHUvY2xhaW1zL2NsaWVudF9wcmVmZXJyZWRfZmlyc3RfbmFtZSI6IkdsZW4iLCJodHRwOi8vYnl1LmVkdS9jbGFpbXMvcmVzb3VyY2Vvd25lcl9zb3J0X25hbWUiOiJTYXd5ZXIsIEdsZW4gRGF2aWQifQ.uqT2Vra-mfNYr5Xa6e3kyHwzxYjWwhXmoJ2roqWX6b0eb1SlTcjSMyWvAERwSYX1QgVS5UiI1mvc8RpRGcaNDJZLX97xs3HpRFeaL8yWRAsrqPAkwYpVcPRdE8eFmb-2rBo0ETQiXMasMUuL4e88eOilJeexh8rAdJoqb316AVEMsD5JYGhsrBboX8reHTRt7MxYr51hQ4LU1NP-mBZAOQ4F9WXbGT67b13ZiNihSklycZ_o_1vD4Na0uOMZ6NrhyhUfXCbEow2CyJdvHC7EbI_6BDvZZxl6j4lRgkyADge4CiuvP05FZTEaQoqCPenrynuKrzIDA2Ww6hXxkOQXcQ");
 //        $this->assertNotEmpty($decoded);
 //    }
+}
+
+
+// SUPER-DUPER HACKY! Semi-overriding a built-in PHP function by defining a function with the same name within the namespace
+// Again, this is just to scratch my personal itch of getting from 99.9% line coverage to 100%
+namespace BYU\JWT; // Need to override the function in the main namespace, not in the Test namespace
+
+if (!\function_exists(__NAMESPACE__ . '\openssl_pkey_get_public')) {
+    function openssl_pkey_get_public($val)
+    {
+        if (is_string($val) && strpos($val, "DEEP MOJO TEST") !== false) {
+            return "dummy test";
+        }
+
+        return \openssl_pkey_get_public($val);
+    }
+
+    function openssl_pkey_get_details($val)
+    {
+        if ($val === "dummy test") {
+            return false;
+        }
+
+        return \openssl_pkey_get_details($val);
+    }
 }
