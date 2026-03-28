@@ -3,7 +3,7 @@
 Basic JWT Decoding and Validation for calls from BYU's API repository
 
 # Requirements
-* PHP 5.4+
+* PHP 7.2.5+
 * OpenSSL extension
 
 ## Installing via composer
@@ -13,7 +13,7 @@ For existing applications you can add the
 following to your composer.json file:
 
     "require": {
-        "byu-oit/jwt": "~2.0"
+        "byu-oit/jwt": "^3.0"
     }
 
 And run `php composer.phar update`
