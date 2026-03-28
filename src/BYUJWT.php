@@ -149,30 +149,6 @@ class BYUJWT
     }
 
     /**
-     * Get the public key of the current well-known URL
-     *
-     * @return string
-     */
-    public function getPublicKey($issuer = "")
-    {
-        $cacheKey = 'publicKey' . $issuer;
-        $cached = $this->getCache($cacheKey);
-        if (!empty($cached)) {
-            return $cached;
-        }
-
-        $keys = $this->getPublicKeys($issuer);
-        if (empty($keys[0])) {
-            return null;
-        }
-
-        $key = $keys[0];
-        $this->setCache($cacheKey, $key);
-
-        return $key;
-    }
-
-    /**
      * Check if a JWT is valid
      *
      * @param string $jwt JWT
@@ -224,7 +200,6 @@ class BYUJWT
      * @return array decoded JWT
      *
      * @throws Exception Various exceptions for various problems with JWT
-     *         (see Firebase\JWT\JWT::decode for details)
      */
     public function decode($jwt)
     {
@@ -241,11 +216,13 @@ class BYUJWT
         }
 
         $header = json_decode($headerJson);
-        $decodedObject = json_decode($payloadJson);
+        //We'll need to iterate through keys when we parse the payload;
+        //iterating through keys is much simpler with an array, so we add the `true` flag for this json_decode
+        $decodedPayload = json_decode($payloadJson, true);
         if (
             json_last_error() !== JSON_ERROR_NONE ||
             !is_object($header) ||
-            !is_object($decodedObject)
+            !is_array($decodedPayload)
         ) {
             throw new Exception('Could not decode JWT');
         }
@@ -274,28 +251,21 @@ class BYUJWT
         if (!$verified) {
             throw new Exception('Could not decode JWT');
         }
-        //Firebase\JWT\JWT::decode does not verify that some required
-        //fields actually exist
-        if (empty($decodedObject->iss)) {
+        //Check some required fields in JWT
+        if (empty($decodedPayload['iss'])) {
             throw new NoIssuerException('No issuer in JWT');
         }
-        if ($decodedObject->iss != $wellKnown->issuer) {
+        if ($decodedPayload['iss'] != $wellKnown->issuer) {
             throw new BadIssuerException('JWT issuer does not match well-known');
         }
-        if (empty($decodedObject->exp)) {
-            //Firebase\JWT\JWT does throw an exception if 'exp' field is in
-            //the past, but not if it's completely missing
+        if (empty($decodedPayload['exp'])) {
             throw new NoExpirationException('No expiration in JWT');
         }
-        if (!is_numeric($decodedObject->exp) || (int)$decodedObject->exp < time()) {
+        if (!is_numeric($decodedPayload['exp']) || (int)$decodedPayload['exp'] < time()) {
             throw new ExpiredException('Expired token');
         }
 
-        //JWT::decode returns at stdClass object, but iterating through keys is much
-        //simpler with an array. So here's a quick Object-to-Array conversion
-        $decoded = json_decode(json_encode($decodedObject), true);
-
-        return $this->parseClaims($decoded);
+        return $this->parseClaims($decodedPayload);
     }
 
     /**

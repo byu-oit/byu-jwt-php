@@ -138,17 +138,6 @@ final class BYUJWTTest extends TestCase
     }
 
     /**
-     * @vcr ok_old_wellknown_and_jwks.yml
-     */
-    public function testPublicKey()
-    {
-        $key = $this->BYUJWT->getPublicKey();
-        $this->assertNotEmpty($key);
-        $cachedKey = $this->BYUJWT->getPublicKey();
-        $this->assertEquals($key, $cachedKey);
-    }
-
-    /**
      * @vcr ok_wellknown_and_jwks.yml
      */
     public function testPublicKeys()
@@ -165,7 +154,6 @@ final class BYUJWTTest extends TestCase
     public function testMissingWellKnown()
     {
         $this->assertEmpty($this->BYUJWT->getWellKnown());
-        $this->assertEmpty($this->BYUJWT->getPublicKey());
         $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
@@ -191,7 +179,6 @@ final class BYUJWTTest extends TestCase
     public function testMissingJwks()
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
-        $this->assertEmpty($this->BYUJWT->getPublicKey());
         $this->assertEmpty($this->BYUJWT->getPublicKeys());
         $this->assertSame(false, $this->BYUJWT->validateJWT("bad JWT!"));
         $this->assertInstanceOf('Exception', $this->BYUJWT->lastException);
@@ -204,7 +191,6 @@ final class BYUJWTTest extends TestCase
     public function testBadJwks()
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
-        $this->assertEmpty($this->BYUJWT->getPublicKey());
         $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
@@ -214,7 +200,6 @@ final class BYUJWTTest extends TestCase
     public function testBadJwksKey()
     {
         $this->assertNotEmpty($this->BYUJWT->getWellKnown());
-        $this->assertEmpty($this->BYUJWT->getPublicKey());
         $this->assertEmpty($this->BYUJWT->getPublicKeys());
     }
 
