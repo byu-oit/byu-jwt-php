@@ -7,5 +7,6 @@ require __DIR__ . '/../vendor/autoload.php';
 //a particular request.
 //Also, we don't need php-vcr's SOAP or stream_wrapper hooks
 \VCR\VCR::configure()
+    ->setCassettePath(__DIR__ . '/fixtures')
     ->enableRequestMatchers(['url'])
     ->enableLibraryHooks(['curl']);

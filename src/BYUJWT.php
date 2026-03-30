@@ -17,11 +17,7 @@
 namespace BYU\JWT;
 
 use Exception;
-use Firebase\JWT\JWT;
-use Firebase\JWT\JWK;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-use phpseclib\File\X509;
 
 /**
  * Provides helpful functions to retrieve a specified BYU
@@ -83,12 +79,12 @@ class BYUJWT
         }
         try {
             $response = $this->client->get($url);
-        } catch (RequestException $e) {
+        } catch (\Throwable $e) {
             $this->lastException = $e;
             return null;
         }
 
-        $output = json_decode($response->getBody());
+        $output = json_decode((string)$response->getBody());
         if (json_last_error() !== JSON_ERROR_NONE) {
             return null;
         }
@@ -120,65 +116,36 @@ class BYUJWT
 
         try {
             $response = $this->client->get($wellKnown->jwks_uri);
-        } catch (RequestException $e) {
+        } catch (\Throwable $e) {
             $this->lastException = $e;
             return $keys;
         }
 
-        $jwks = json_decode($response->getBody(), true);
+        $jwks = json_decode((string)$response->getBody(), true);
         if (!is_array($jwks)) {
             return $keys;
         }
-        try {
-            $keys = JWK::parseKeySet($jwks);
+
+        if (empty($jwks['keys']) || !is_array($jwks['keys'])) {
+            return $keys;
+        }
+
+        foreach ($jwks['keys'] as $jwk) {
+            if (!is_array($jwk)) {
+                continue;
+            }
+
+            $key = $this->createPublicKeyFromJwk($jwk);
+            if ($key !== null) {
+                $keys[] = $key;
+            }
+        }
+
+        if (!empty($keys)) {
             $this->setCache($cacheKey, $keys);
-        } catch (\Exception $e) {
-            // Intentional ignore
         }
 
         return $keys;
-    }
-
-    /**
-     * Get the public key of the current well-known URL
-     *
-     * @return string
-     */
-    public function getPublicKey($issuer = "")
-    {
-        $cacheKey = 'publicKey' . $issuer;
-        $cached = $this->getCache($cacheKey);
-        if (!empty($cached)) {
-            return $cached;
-        }
-
-        $wellKnown = $this->getWellKnown($issuer);
-        if (empty($wellKnown->jwks_uri)) {
-            return null;
-        }
-
-        try {
-            $response = $this->client->get($wellKnown->jwks_uri);
-        } catch (RequestException $e) {
-            $this->lastException = $e;
-            return null;
-        }
-
-        $jwks = json_decode($response->getBody());
-        if (empty($jwks->keys[0]->x5c[0])) {
-            return null;
-        }
-
-        $X509 = new X509();
-        if (!$X509->loadX509($jwks->keys[0]->x5c[0])) {
-            return null;
-        }
-
-        $key = (string)$X509->getPublicKey();
-
-        $this->setCache($cacheKey, $key);
-
-        return $key;
     }
 
     /**
@@ -209,10 +176,13 @@ class BYUJWT
             return "";
         }
         $bodyb64 = $tks[1];
-        try {
-            $payload = JWT::jsonDecode(JWT::urlsafeB64Decode($bodyb64));
-        } catch (\Exception $e) {
-            // Intentionally ignoring. We don't care *why* the payload decode failed here, since this is just a simple check to see if the jwt has an "iss" field set
+        $payloadJson = $this->base64UrlDecode($bodyb64);
+        if ($payloadJson === null) {
+            return "";
+        }
+
+        $payload = json_decode($payloadJson);
+        if (json_last_error() !== JSON_ERROR_NONE) {
             return "";
         }
         if (empty($payload->iss) || !is_string($payload->iss)) {
@@ -230,51 +200,72 @@ class BYUJWT
      * @return array decoded JWT
      *
      * @throws Exception Various exceptions for various problems with JWT
-     *         (see Firebase\JWT\JWT::decode for details)
      */
     public function decode($jwt)
     {
+        $parts = \explode('.', $jwt);
+        if (\count($parts) !== 3) {
+            throw new Exception('Could not decode JWT');
+        }
+
+        $headerJson = $this->base64UrlDecode($parts[0]);
+        $payloadJson = $this->base64UrlDecode($parts[1]);
+        $signature = $this->base64UrlDecode($parts[2]);
+        if ($headerJson === null || $payloadJson === null || $signature === null) {
+            throw new Exception('Could not decode JWT');
+        }
+
+        $header = json_decode($headerJson);
+        //We'll need to iterate through keys when we parse the payload;
+        //iterating through keys is much simpler with an array, so we add the `true` flag for this json_decode
+        $decodedPayload = json_decode($payloadJson, true);
+        if (
+            json_last_error() !== JSON_ERROR_NONE ||
+            !is_object($header) ||
+            !is_array($decodedPayload)
+        ) {
+            throw new Exception('Could not decode JWT');
+        }
+
         $issuer = $this->getIssuer($jwt);
         $wellKnown = $this->getWellKnown($issuer);
         $keys = $this->getPublicKeys($issuer);
-        foreach ($keys as $key) {
-            try {
-                $decodedObject = JWT::decode(
-                    $jwt,
-                    $key,
-                    $wellKnown->id_token_signing_alg_values_supported
-                );
-                break; // Successful decode, so exit loop
-            } catch (\Exception $decodeError) {
+        if (
+            empty($header->alg) ||
+            !is_string($header->alg) ||
+            !$this->isAlgorithmAllowed($header->alg, $wellKnown)
+        ) {
+            throw new Exception('Algorithm not allowed');
+        }
 
+        $signingInput = $parts[0] . '.' . $parts[1];
+        $verified = false;
+        foreach ($keys as $key) {
+            $result = openssl_verify($signingInput, $signature, $key, OPENSSL_ALGO_SHA256);
+            if ($result === 1) {
+                $verified = true;
+                break;
             }
         }
 
-        if (empty($decodedObject)) {
-            if (!empty($decodeError)) {
-                throw $decodeError;
-            }
+        if (!$verified) {
             throw new Exception('Could not decode JWT');
         }
-        //Firebase\JWT\JWT::decode does not verify that some required
-        //fields actually exist
-        if (empty($decodedObject->iss)) {
+        //Check some required fields in JWT
+        if (empty($decodedPayload['iss'])) {
             throw new NoIssuerException('No issuer in JWT');
         }
-        if ($decodedObject->iss != $wellKnown->issuer) {
+        if ($decodedPayload['iss'] != $wellKnown->issuer) {
             throw new BadIssuerException('JWT issuer does not match well-known');
         }
-        if (empty($decodedObject->exp)) {
-            //Firebase\JWT\JWT does throw an exception if 'exp' field is in
-            //the past, but not if it's completely missing
+        if (empty($decodedPayload['exp'])) {
             throw new NoExpirationException('No expiration in JWT');
         }
+        if (!is_numeric($decodedPayload['exp']) || (int)$decodedPayload['exp'] < time()) {
+            throw new ExpiredException('Expired token');
+        }
 
-        //JWT::decode returns at stdClass object, but iterating through keys is much
-        //simpler with an array. So here's a quick Object-to-Array conversion
-        $decoded = json_decode(json_encode($decodedObject), true);
-
-        return $this->parseClaims($decoded);
+        return $this->parseClaims($decodedPayload);
     }
 
     /**
@@ -381,5 +372,183 @@ class BYUJWT
     protected function setCache($key, $value)
     {
         $this->cache[$key] = $value;
+    }
+
+    /**
+     * Decode a base64url string into raw JSON.
+     *
+     * @param string $data Base64url-encoded payload
+     *
+     * @return string|null
+     */
+    protected function base64UrlDecode($data)
+    {
+        $remainder = strlen($data) % 4;
+        if ($remainder !== 0) {
+            $data .= str_repeat('=', 4 - $remainder);
+        }
+
+        $decoded = base64_decode(strtr($data, '-_', '+/'), true);
+        if ($decoded === false) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Convert a JWKS entry into a PEM-encoded RSA public key.
+     *
+     * @param array $jwk
+     *
+     * @return string|null
+     */
+    protected function createPublicKeyFromJwk(array $jwk)
+    {
+        if (!empty($jwk['x5c'][0]) && is_string($jwk['x5c'][0])) {
+            return $this->createPublicKeyFromCertificate($jwk['x5c'][0]);
+        }
+
+        if (
+            empty($jwk['kty']) ||
+            $jwk['kty'] !== 'RSA' ||
+            empty($jwk['n']) ||
+            empty($jwk['e']) ||
+            !is_string($jwk['n']) ||
+            !is_string($jwk['e'])
+        ) {
+            return null;
+        }
+
+        $modulus = $this->base64UrlDecode($jwk['n']);
+        $exponent = $this->base64UrlDecode($jwk['e']);
+        if ($modulus === null || $exponent === null) {
+            return null;
+        }
+
+        $rsaPublicKey = $this->asn1EncodeSequence(
+            $this->asn1EncodeInteger($modulus)
+            . $this->asn1EncodeInteger($exponent)
+        );
+        $algorithmIdentifier = hex2bin('300d06092a864886f70d0101010500');
+        $subjectPublicKeyInfo = $this->asn1EncodeSequence(
+            $algorithmIdentifier
+            . $this->asn1EncodeBitString($rsaPublicKey)
+        );
+
+        return "-----BEGIN PUBLIC KEY-----\n"
+            . chunk_split(base64_encode($subjectPublicKeyInfo), 64, "\n")
+            . "-----END PUBLIC KEY-----\n";
+    }
+
+    /**
+     * Convert a DER certificate body into a PEM public key.
+     *
+     * @param string $certificateBody
+     *
+     * @return string|null
+     */
+    protected function createPublicKeyFromCertificate($certificateBody)
+    {
+        $certificate = "-----BEGIN CERTIFICATE-----\n"
+            . chunk_split($certificateBody, 64, "\n")
+            . "-----END CERTIFICATE-----\n";
+        $publicKey = openssl_pkey_get_public($certificate);
+        if ($publicKey === false) {
+            return null;
+        }
+
+        $publicKeyDetails = openssl_pkey_get_details($publicKey);
+        if ($publicKeyDetails === false || empty($publicKeyDetails['key'])) {
+            return null;
+        }
+
+        return $publicKeyDetails['key'];
+    }
+
+    /**
+     * Check the token algorithm against the well-known metadata.
+     *
+     * @param string $algorithm
+     * @param object|null $wellKnown
+     *
+     * @return bool
+     */
+    protected function isAlgorithmAllowed($algorithm, $wellKnown)
+    {
+        if (
+            empty($wellKnown) ||
+            empty($wellKnown->id_token_signing_alg_values_supported) ||
+            !is_array($wellKnown->id_token_signing_alg_values_supported)
+        ) {
+            return $algorithm === 'RS256';
+        }
+
+        return in_array($algorithm, $wellKnown->id_token_signing_alg_values_supported, true);
+    }
+
+    /**
+     * ASN.1 DER-encode an INTEGER.
+     *
+     * @param string $value
+     *
+     * @return string
+     */
+    protected function asn1EncodeInteger($value)
+    {
+        if ($value === '') {
+            $value = "\x00";
+        }
+        if (ord($value[0]) > 0x7f) {
+            $value = "\x00" . $value;
+        }
+
+        return "\x02" . $this->asn1EncodeLength(strlen($value)) . $value;
+    }
+
+    /**
+     * ASN.1 DER-encode a SEQUENCE.
+     *
+     * @param string $value
+     *
+     * @return string
+     */
+    protected function asn1EncodeSequence($value)
+    {
+        return "\x30" . $this->asn1EncodeLength(strlen($value)) . $value;
+    }
+
+    /**
+     * ASN.1 DER-encode a BIT STRING.
+     *
+     * @param string $value
+     *
+     * @return string
+     */
+    protected function asn1EncodeBitString($value)
+    {
+        return "\x03" . $this->asn1EncodeLength(strlen($value) + 1) . "\x00" . $value;
+    }
+
+    /**
+     * ASN.1 DER-encode a length.
+     *
+     * @param int $length
+     *
+     * @return string
+     */
+    protected function asn1EncodeLength($length)
+    {
+        if ($length < 0x80) {
+            return chr($length);
+        }
+
+        $encoded = '';
+        while ($length > 0) {
+            $encoded = chr($length & 0xff) . $encoded;
+            $length >>= 8;
+        }
+
+        return chr(0x80 | strlen($encoded)) . $encoded;
     }
 }
